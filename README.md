@@ -1,4 +1,4 @@
-# debtLens
+# DebtLens
 
 **Analizador estático de deuda técnica para proyectos de software.**
 
