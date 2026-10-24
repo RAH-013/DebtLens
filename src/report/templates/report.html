@@ -1,0 +1,2123 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Informe de análisis estático y deuda técnica generado por debtLens."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%2317152F'/%3E%3Cpath d='M4 24C9 14 16 10 24 10S39 14 44 24C39 34 32 38 24 38S9 34 4 24Z' fill='none' stroke='%23A99AFF' stroke-width='3'/%3E%3Ccircle cx='24' cy='24' r='10' fill='%238875FF'/%3E%3Ccircle cx='24' cy='24' r='5' fill='%2317152F'/%3E%3C/svg%3E"
+    />
+    <title>DebtLens — Informe de {{PROJECT}}</title>
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          "Plus Jakarta Sans",
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --surface-secondary: #f1f5f9;
+        --surface-hover: #e2e8f0;
+        --border: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+
+        --accent: #6366f1;
+        --accent-hover: #4f46e5;
+        --accent-soft: #eef2ff;
+        --accent-text: #4338ca;
+        --accent-glow: rgba(99, 102, 241, 0.15);
+
+        --code-background: #0f172a;
+        --code-text: #f8fafc;
+        --code-highlight: rgba(245, 158, 11, 0.15);
+        --code-highlight-border: #f59e0b;
+        --code-highlight-text: #fef3c7;
+
+        --track: #e2e8f0;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow:
+          0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        --shadow-hover:
+          0 12px 24px -4px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04);
+
+        --high: #ef4444;
+        --high-bg: #fef2f2;
+        --high-border: #fecaca;
+        --medium: #d97706;
+        --medium-bg: #fffbeb;
+        --medium-border: #fde68a;
+        --low: #2563eb;
+        --low-bg: #eff6ff;
+        --low-border: #bfdbfe;
+        --info: #475569;
+        --info-bg: #f8fafc;
+        --info-border: #e2e8f0;
+
+        --radius-sm: 8px;
+        --radius-md: 14px;
+        --radius-lg: 20px;
+        --content-width: 1180px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --background: #0b0f19;
+          --surface: #111827;
+          --surface-secondary: #1f2937;
+          --surface-hover: #374151;
+          --border: #1f2937;
+          --border-strong: #374151;
+          --text: #f9fafb;
+          --text-secondary: #9ca3af;
+          --text-muted: #6b7280;
+
+          --accent: #818cf8;
+          --accent-hover: #a5b4fc;
+          --accent-soft: rgba(99, 102, 241, 0.18);
+          --accent-text: #c7d2fe;
+          --accent-glow: rgba(129, 140, 248, 0.25);
+
+          --code-background: #030712;
+          --code-text: #f3f4f6;
+          --code-highlight: rgba(245, 158, 11, 0.2);
+          --code-highlight-border: #f59e0b;
+          --code-highlight-text: #fef3c7;
+
+          --track: #1f2937;
+          --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+          --shadow: 0 4px 12px 0 rgb(0 0 0 / 0.35);
+          --shadow-hover: 0 12px 28px -4px rgb(0 0 0 / 0.5);
+
+          --high: #f87171;
+          --high-bg: rgba(239, 68, 68, 0.12);
+          --high-border: rgba(239, 68, 68, 0.3);
+          --medium: #fbbf24;
+          --medium-bg: rgba(245, 158, 11, 0.12);
+          --medium-border: rgba(245, 158, 11, 0.3);
+          --low: #60a5fa;
+          --low-bg: rgba(59, 130, 246, 0.12);
+          --low-border: rgba(59, 130, 246, 0.3);
+          --info: #9ca3af;
+          --info-bg: rgba(107, 114, 128, 0.12);
+          --info-border: rgba(107, 114, 128, 0.3);
+        }
+      }
+
+      html[data-theme="dark"] {
+        --background: #0b0f19;
+        --surface: #111827;
+        --surface-secondary: #1f2937;
+        --surface-hover: #374151;
+        --border: #1f2937;
+        --border-strong: #374151;
+        --text: #f9fafb;
+        --text-secondary: #9ca3af;
+        --text-muted: #6b7280;
+
+        --accent: #818cf8;
+        --accent-hover: #a5b4fc;
+        --accent-soft: rgba(99, 102, 241, 0.18);
+        --accent-text: #c7d2fe;
+        --accent-glow: rgba(129, 140, 248, 0.25);
+
+        --code-background: #030712;
+        --code-text: #f3f4f6;
+        --code-highlight: rgba(245, 158, 11, 0.2);
+        --code-highlight-border: #f59e0b;
+        --code-highlight-text: #fef3c7;
+
+        --track: #1f2937;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+        --shadow: 0 4px 12px 0 rgb(0 0 0 / 0.35);
+        --shadow-hover: 0 12px 28px -4px rgb(0 0 0 / 0.5);
+
+        --high: #f87171;
+        --high-bg: rgba(239, 68, 68, 0.12);
+        --high-border: rgba(239, 68, 68, 0.3);
+        --medium: #fbbf24;
+        --medium-bg: rgba(245, 158, 11, 0.12);
+        --medium-border: rgba(245, 158, 11, 0.3);
+        --low: #60a5fa;
+        --low-bg: rgba(59, 130, 246, 0.12);
+        --low-border: rgba(59, 130, 246, 0.3);
+        --info: #9ca3af;
+        --info-bg: rgba(107, 114, 128, 0.12);
+        --info-border: rgba(107, 114, 128, 0.3);
+      }
+
+      html[data-theme="light"] {
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --surface-secondary: #f1f5f9;
+        --surface-hover: #e2e8f0;
+        --border: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+
+        --accent: #6366f1;
+        --accent-hover: #4f46e5;
+        --accent-soft: #eef2ff;
+        --accent-text: #4338ca;
+        --accent-glow: rgba(99, 102, 241, 0.15);
+
+        --code-background: #0f172a;
+        --code-text: #f8fafc;
+        --code-highlight: rgba(245, 158, 11, 0.15);
+        --code-highlight-border: #f59e0b;
+        --code-highlight-text: #fef3c7;
+
+        --track: #e2e8f0;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow:
+          0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        --shadow-hover:
+          0 12px 24px -4px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04);
+
+        --high: #ef4444;
+        --high-bg: #fef2f2;
+        --high-border: #fecaca;
+        --medium: #d97706;
+        --medium-bg: #fffbeb;
+        --medium-border: #fde68a;
+        --low: #2563eb;
+        --low-bg: #eff6ff;
+        --low-border: #bfdbfe;
+        --info: #475569;
+        --info-bg: #f8fafc;
+        --info-border: #e2e8f0;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        scroll-behavior: smooth;
+        scroll-padding-top: 80px;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.65;
+        transition:
+          background-color 220ms ease,
+          color 220ms ease;
+      }
+
+      a {
+        color: var(--accent);
+        text-underline-offset: 3px;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button,
+      select,
+      input {
+        accent-color: var(--accent);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      ::selection {
+        color: var(--text);
+        background: var(--accent-soft);
+      }
+
+      .container {
+        width: min(var(--content-width), calc(100% - 40px));
+        margin-inline: auto;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        background-color: rgba(var(--surface), 0.85);
+      }
+
+      .topbar-inner {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .brand-icon {
+        width: 36px;
+        height: 36px;
+        color: var(--accent);
+        transition: transform 220ms ease;
+      }
+
+      .brand:hover .brand-icon {
+        transform: scale(1.08);
+      }
+
+      .brand-name {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .brand-name span {
+        color: var(--accent);
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .report-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 7px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+      }
+
+      /* Theme Switcher Button Control */
+      .theme-switcher {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        background: var(--surface-secondary);
+        gap: 2px;
+      }
+
+      .theme-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 99px;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 180ms ease;
+        user-select: none;
+      }
+
+      .theme-btn svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+      }
+
+      .theme-btn:hover {
+        color: var(--text);
+        background: var(--surface-hover);
+      }
+
+      .theme-btn.active {
+        background: var(--surface);
+        color: var(--accent);
+        font-weight: 700;
+        box-shadow: var(--shadow-sm);
+      }
+
+      main {
+        padding-block: 36px 64px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: clamp(28px, 4vw, 44px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background:
+          radial-gradient(
+            circle at 100% 0%,
+            var(--accent-glow) 0%,
+            transparent 60%
+          ),
+          var(--surface);
+        box-shadow: var(--shadow);
+        animation: reveal 450ms ease both;
+      }
+
+      .eyebrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow-separator {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--text-muted);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 850px;
+        margin-bottom: 12px;
+        font-size: clamp(26px, 4vw, 40px);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+      }
+
+      h1 code {
+        font: inherit;
+        color: var(--accent);
+        overflow-wrap: anywhere;
+      }
+
+      .hero-description {
+        max-width: 760px;
+        margin-bottom: 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .hero-project {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .hero-project svg {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        color: var(--accent);
+      }
+
+      .hero-project code {
+        color: var(--text);
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+
+      .section-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 36px 0 18px;
+      }
+
+      .section-heading h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .section-heading p {
+        margin: 4px 0 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .stat-card {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        animation: reveal 480ms ease both;
+        transition:
+          transform 180ms ease,
+          border-color 180ms ease,
+          box-shadow 180ms ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-hover);
+      }
+
+      .stat-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .stat-label {
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .stat-icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .stat-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .stat-value {
+        display: block;
+        margin-top: 12px;
+        font-size: clamp(26px, 3vw, 32px);
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stat-note {
+        margin: 6px 0 0;
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .overview {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      .panel {
+        min-width: 0;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        animation: reveal 500ms ease both;
+      }
+
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .panel-heading h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .panel-icon {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 32px;
+        place-items: center;
+        border-radius: 9px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .panel-icon svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .panel-description {
+        margin-bottom: 18px;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .bar {
+        display: flex;
+        height: 10px;
+        overflow: hidden;
+        margin: 20px 0;
+        border-radius: 99px;
+        background: var(--track);
+      }
+
+      .bar span {
+        display: block;
+        min-width: 0;
+        height: 100%;
+        transform-origin: left center;
+        animation: grow 800ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+      }
+
+      .bar-high {
+        background: var(--high);
+      }
+
+      .bar-medium {
+        background: var(--medium);
+      }
+
+      .bar-low {
+        background: var(--low);
+      }
+
+      .bar-info {
+        background: var(--info);
+      }
+
+      .severity-legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+      }
+
+      .legend-item {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .legend-label {
+        display: inline-flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 8px;
+        border-radius: 3px;
+      }
+
+      .legend-value {
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 750;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .interpretation-list {
+        display: grid;
+        gap: 16px;
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .interpretation-list li {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        align-items: start;
+        gap: 12px;
+      }
+
+      .interpretation-number {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-secondary);
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .interpretation-list strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 13px;
+      }
+
+      .interpretation-list p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .findings-section {
+        margin-top: 44px;
+      }
+
+      .findings-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .findings-heading h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .findings-heading p {
+        margin: 4px 0 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .result-badge {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 12px;
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .result-badge svg {
+        width: 14px;
+        height: 14px;
+        color: var(--accent);
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr) auto;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 18px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .field {
+        display: grid;
+        min-width: 0;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .control {
+        width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--surface-secondary);
+        color: var(--text);
+        outline-offset: 2px;
+        transition:
+          border-color 160ms ease,
+          background-color 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .control:hover {
+        border-color: var(--accent);
+      }
+
+      .control:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+
+      .control::placeholder {
+        color: var(--text-muted);
+        opacity: 1;
+      }
+
+      .search-wrap {
+        position: relative;
+      }
+
+      .search-wrap svg {
+        position: absolute;
+        top: 50%;
+        left: 12px;
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted);
+        pointer-events: none;
+        transform: translateY(-50%);
+      }
+
+      .search-wrap input {
+        padding-left: 36px;
+      }
+
+      .clear-button {
+        min-height: 40px;
+        padding: 8px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 160ms ease;
+      }
+
+      .clear-button:hover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent-text);
+      }
+
+      .findings {
+        display: grid;
+        gap: 14px;
+      }
+
+      .finding {
+        min-width: 0;
+        padding: 1rem;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        animation: reveal 420ms ease both;
+        transition:
+          border-color 180ms ease,
+          box-shadow 180ms ease;
+      }
+
+      .finding:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-hover);
+      }
+
+      .finding-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 20px 22px 16px;
+      }
+
+      .finding-title-group {
+        min-width: 0;
+      }
+
+      .finding-eyebrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .finding-meta {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: start;
+        gap: 1rem;
+        padding-bottom: 1rem;
+      }
+
+      .rule-id {
+        color: var(--text-muted);
+        font-family:
+          ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .severity {
+        display: inline-flex;
+        min-height: 22px;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 8px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .severity::before {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      .severity.high {
+        border-color: var(--high-border);
+        background: var(--high-bg);
+        color: var(--high);
+      }
+
+      .severity.medium {
+        border-color: var(--medium-border);
+        background: var(--medium-bg);
+        color: var(--medium);
+      }
+
+      .severity.low {
+        border-color: var(--low-border);
+        background: var(--low-bg);
+        color: var(--low);
+      }
+
+      .severity.info {
+        border-color: var(--info-border);
+        background: var(--info-bg);
+        color: var(--info);
+      }
+
+      .finding h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+
+      .finding-location {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 7px;
+        margin-top: 8px;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .finding-location svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 14px;
+        color: var(--accent);
+      }
+
+      .finding-location code {
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--surface-secondary);
+        color: var(--text);
+        font-size: 11px;
+        overflow-wrap: anywhere;
+      }
+
+      .finding-body {
+        padding: 0 22px 20px;
+      }
+
+      .finding-description {
+        max-width: 900px;
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .recommendation {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface-secondary);
+      }
+
+      .recommendation-icon {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .recommendation-icon svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .recommendation strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .recommendation p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .detail {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      .detail h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .detail h4 svg {
+        width: 15px;
+        height: 15px;
+        color: var(--accent);
+      }
+
+      .detail p {
+        margin: 4px 0 10px;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .source-code {
+        display: block;
+        max-width: 100%;
+        overflow: auto;
+        margin: 10px 0 0;
+        padding: 12px 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--code-background);
+        color: var(--code-text);
+        font:
+          12px/1.8 ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          "Liberation Mono",
+          monospace;
+        tab-size: 4;
+        white-space: pre;
+        scrollbar-color: var(--border-strong) transparent;
+        scrollbar-width: thin;
+      }
+
+      .source-code code {
+        display: block;
+        min-width: max-content;
+        color: inherit;
+        font: inherit;
+      }
+
+      .source-line {
+        display: block;
+        min-width: max-content;
+        padding: 0 16px;
+        border-left: 3px solid transparent;
+      }
+
+      .source-line.target {
+        border-left-color: var(--code-highlight-border);
+        background: var(--code-highlight);
+        color: var(--code-highlight-text);
+      }
+
+      .line-number {
+        display: inline-block;
+        width: 4ch;
+        margin-right: 16px;
+        color: var(--text-muted);
+        text-align: right;
+        user-select: none;
+      }
+
+      .source-line.target .line-number {
+        color: var(--code-highlight-text);
+        font-weight: 800;
+      }
+
+      .related-location {
+        margin-top: 18px;
+      }
+
+      .related-location h4 {
+        margin-bottom: 10px;
+      }
+
+      .empty {
+        padding: 48px 24px;
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        text-align: center;
+        animation: reveal 300ms ease both;
+      }
+
+      .empty-icon {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 14px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .empty-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .empty h3 {
+        margin-bottom: 6px;
+        font-size: 16px;
+      }
+
+      .empty p {
+        max-width: 440px;
+        margin: 0 auto;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .empty .clear-button {
+        margin-top: 16px;
+      }
+
+      .results-status {
+        min-height: 22px;
+        margin: 14px 0 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .footer {
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .footer-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-block: 24px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .footer-brand {
+        color: var(--text);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .footer-brand span {
+        color: var(--accent);
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      @keyframes reveal {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes grow {
+        from {
+          transform: scaleX(0);
+        }
+
+        to {
+          transform: scaleX(1);
+        }
+      }
+
+      @media (min-width: 900px) {
+        .stats .stat-card:nth-child(1) {
+          animation-delay: 30ms;
+        }
+        .stats .stat-card:nth-child(2) {
+          animation-delay: 60ms;
+        }
+        .stats .stat-card:nth-child(3) {
+          animation-delay: 90ms;
+        }
+        .stats .stat-card:nth-child(4) {
+          animation-delay: 120ms;
+        }
+        .stats .stat-card:nth-child(5) {
+          animation-delay: 150ms;
+        }
+        .stats .stat-card:nth-child(6) {
+          animation-delay: 180ms;
+        }
+      }
+
+      @media (max-width: 800px) {
+        .stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .overview {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .clear-button {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 580px) {
+        .topbar-actions {
+          gap: 8px;
+        }
+
+        .theme-btn span {
+          display: none;
+        }
+
+        .theme-btn {
+          padding: 6px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .container {
+          width: min(100% - 24px, var(--content-width));
+        }
+
+        .topbar-inner {
+          min-height: 58px;
+        }
+
+        .report-label {
+          font-size: 11px;
+        }
+
+        main {
+          padding-block: 20px 42px;
+        }
+
+        .hero {
+          padding: 20px 16px;
+          border-radius: 14px;
+        }
+
+        h1 {
+          font-size: 26px;
+        }
+
+        .section-heading {
+          margin-top: 28px;
+        }
+
+        .stats {
+          gap: 10px;
+        }
+
+        .stat-card {
+          padding: 14px;
+          border-radius: 11px;
+        }
+
+        .stat-label {
+          font-size: 11px;
+        }
+
+        .stat-icon {
+          width: 30px;
+          height: 30px;
+          flex-basis: 30px;
+          border-radius: 8px;
+        }
+
+        .stat-icon svg {
+          width: 15px;
+          height: 15px;
+        }
+
+        .stat-value {
+          font-size: 24px;
+        }
+
+        .panel {
+          padding: 18px;
+        }
+
+        .findings-section {
+          margin-top: 32px;
+        }
+
+        .findings-heading {
+          align-items: flex-start;
+        }
+
+        .toolbar {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 12px;
+        }
+
+        .clear-button {
+          grid-column: auto;
+        }
+
+        .finding-header {
+          padding: 16px 14px 12px;
+        }
+
+        .finding-body {
+          padding: 0 14px 16px;
+        }
+
+        .finding h3 {
+          font-size: 15px;
+        }
+
+        .recommendation {
+          padding: 12px;
+        }
+
+        .severity-legend {
+          gap: 10px;
+        }
+
+        .footer-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="#top" aria-label="debtLens">
+          <svg
+            class="brand-icon"
+            viewBox="0 0 48 48"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 24C9.5 14.5 16.2 10 24 10S38.5 14.5 44 24C38.5 33.5 31.8 38 24 38S9.5 33.5 4 24Z"
+              stroke="currentColor"
+              stroke-width="2.8"
+              stroke-linejoin="round"
+            />
+            <circle cx="24" cy="24" r="10" fill="#8875FF" />
+            <circle cx="24" cy="24" r="5.2" fill="#17152F" />
+            <circle cx="21.5" cy="21.5" r="2" fill="#FFFFFF" />
+            <path
+              d="M24 11V14M24 34V37M11 24H14M34 24H37"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <span class="brand-name">Debt<span>Lens</span></span>
+        </a>
+
+        <div class="topbar-actions">
+          <div
+            class="theme-switcher"
+            role="radiogroup"
+            aria-label="Selección de tema"
+          >
+            <button
+              type="button"
+              class="theme-btn active"
+              data-theme-val="system"
+              aria-label="Tema del sistema"
+              title="Usar tema del sistema"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>Sistema</span>
+            </button>
+            <button
+              type="button"
+              class="theme-btn"
+              data-theme-val="light"
+              aria-label="Tema claro"
+              title="Usar tema claro"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+              <span>Claro</span>
+            </button>
+            <button
+              type="button"
+              class="theme-btn"
+              data-theme-val="dark"
+              aria-label="Tema oscuro"
+              title="Usar tema oscuro"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+              <span>Oscuro</span>
+            </button>
+          </div>
+
+          <div class="report-label">
+            <span class="status-dot" aria-hidden="true"></span>
+            Análisis estático
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="container" id="top">
+      <header class="hero">
+        <p class="eyebrow">
+          Informe técnico
+          <span class="eyebrow-separator" aria-hidden="true"></span>
+          Revisión de código
+        </p>
+
+        <h1>Informe de análisis estático</h1>
+
+        <p class="hero-description">
+          Resumen de las métricas del proyecto y los hallazgos identificados por
+          las reglas de debtLens. Cada resultado incluye su ubicación, evidencia
+          disponible y una recomendación de mejora.
+        </p>
+
+        <div class="hero-project">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M3.5 7.5h6l2 2H20a1 1 0 0 1 1 1v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Proyecto</span>
+          <code>{{PROJECT}}</code>
+        </div>
+      </header>
+
+      <section aria-labelledby="metrics-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="metrics-heading">Resumen del proyecto</h2>
+            <p>Indicadores generales de la ejecución del análisis.</p>
+          </div>
+        </div>
+
+        <div class="stats" aria-label="Métricas del proyecto">
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Archivos analizados</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M6 3.5h8l4 4V20H6V3.5Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M14 3.5v4h4M9 12h6M9 15.5h6"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value">{{FILES}}</strong>
+            <p class="stat-note">Archivos procesados</p>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Archivos afectados</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 3.5 20 7v5c0 4.5-3.4 7.4-8 9-4.6-1.6-8-4.5-8-9V7l8-3.5Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 8v4.5M12 16h.01"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value"
+              >{{AFFECTED}}
+              <span
+                style="
+                  font-size: 15px;
+                  color: var(--text-muted);
+                  font-weight: 600;
+                "
+                >/ {{FILES}}</span
+              ></strong
+            >
+            <p class="stat-note">Con al menos un hallazgo</p>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Porcentaje afectado</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M19 5 5 19M7.5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM16.5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value"
+              >{{AFFECTED_PERCENTAGE}}<span
+                style="font-size: 18px; color: var(--text-secondary)"
+                >%</span
+              ></strong
+            >
+            <p class="stat-note">Archivos únicos afectados</p>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Hallazgos detectados</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 3.5 21 20H3l9-16.5Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 9v4.5M12 17h.01"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value">{{FINDING_COUNT}}</strong>
+            <p class="stat-note">Resultados de las reglas activas</p>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Densidad de hallazgos</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 19V5M4 19h16M8 15l3-4 3 2 5-7"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value">{{DENSITY}}</strong>
+            <p class="stat-note">Por cada 1.000 líneas analizadas</p>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">Errores sintácticos</span>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="m8 5-5 7 5 7M16 5l5 7-5 7M14 3l-4 18"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <strong class="stat-value">{{SYNTAX_ERRORS}}</strong>
+            <p class="stat-note">Archivos con errores detectados</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="overview" aria-label="Análisis general">
+        <article class="panel">
+          <div class="panel-heading">
+            <span class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 19V5M4 19h16"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M7 15h3V9H7v6ZM12 15h3V5h-3v10ZM17 15h2v-4h-2v4Z"
+                  fill="currentColor"
+                  opacity=".8"
+                />
+              </svg>
+            </span>
+            <h2>Distribución por severidad</h2>
+          </div>
+
+          <p class="panel-description">
+            Clasificación de los hallazgos según el nivel asignado por las
+            reglas del analizador.
+          </p>
+
+          <div
+            class="bar"
+            role="img"
+            aria-label="Alta: {{HIGH}}, media: {{MEDIUM}}, baja: {{LOW}}, informativa: {{INFO}}"
+          >
+            <span class="bar-high" style="width: {{HIGH_WIDTH}}%"></span>
+            <span class="bar-medium" style="width: {{MEDIUM_WIDTH}}%"></span>
+            <span class="bar-low" style="width: {{LOW_WIDTH}}%"></span>
+            <span class="bar-info" style="width: {{INFO_WIDTH}}%"></span>
+          </div>
+
+          <div class="severity-legend">
+            <div class="legend-item">
+              <span class="legend-label">
+                <span class="legend-dot" style="background: var(--high)"></span>
+                Alta
+              </span>
+              <strong class="legend-value">{{HIGH}}</strong>
+            </div>
+
+            <div class="legend-item">
+              <span class="legend-label">
+                <span
+                  class="legend-dot"
+                  style="background: var(--medium)"
+                ></span>
+                Media
+              </span>
+              <strong class="legend-value">{{MEDIUM}}</strong>
+            </div>
+
+            <div class="legend-item">
+              <span class="legend-label">
+                <span class="legend-dot" style="background: var(--low)"></span>
+                Baja
+              </span>
+              <strong class="legend-value">{{LOW}}</strong>
+            </div>
+
+            <div class="legend-item">
+              <span class="legend-label">
+                <span class="legend-dot" style="background: var(--info)"></span>
+                Informativa
+              </span>
+              <strong class="legend-value">{{INFO}}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <span class="panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                />
+                <path
+                  d="M12 11v5M12 7.5h.01"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            <h2>Cómo interpretar el informe</h2>
+          </div>
+
+          <ul class="interpretation-list">
+            <li>
+              <span class="interpretation-number">01</span>
+              <div>
+                <strong>Archivos afectados</strong>
+                <p>
+                  Proporción de archivos únicos que contienen al menos un
+                  hallazgo detectado.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="interpretation-number">02</span>
+              <div>
+                <strong>Densidad de hallazgos</strong>
+                <p>
+                  Número de hallazgos por cada mil líneas analizadas; permite
+                  comparar proyectos de distinto tamaño con cautela.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="interpretation-number">03</span>
+              <div>
+                <strong>Resultados orientativos</strong>
+                <p>
+                  Las métricas dependen de las reglas implementadas. No
+                  representan por sí solas el costo de reparación ni toda la
+                  deuda técnica del proyecto.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="findings-section" aria-labelledby="findings-heading">
+        <div class="findings-heading">
+          <div>
+            <h2 id="findings-heading">Hallazgos detectados</h2>
+            <p>Consulta cada resultado y revisa su contexto de código.</p>
+          </div>
+
+          <span class="result-badge">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M5 5h14M8 12h8M10 19h4"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span id="result-badge-count">{{FINDING_COUNT}}</span>
+            resultados
+          </span>
+        </div>
+
+        <div class="toolbar" role="search" aria-label="Filtrar hallazgos">
+          <div class="field">
+            <label for="severity-filter">Severidad</label>
+            <select class="control" id="severity-filter">
+              <option value="all">Todas las severidades</option>
+              <option value="high">Alta</option>
+              <option value="medium">Media</option>
+              <option value="low">Baja</option>
+              <option value="info">Informativa</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="search-filter">Buscar en los resultados</label>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle
+                  cx="10.8"
+                  cy="10.8"
+                  r="6.8"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                />
+                <path
+                  d="m16 16 4.5 4.5"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <input
+                class="control"
+                id="search-filter"
+                type="search"
+                placeholder="Regla, archivo o descripción..."
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+          </div>
+
+          <button class="clear-button" id="clear-filters" type="button">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div class="findings" id="findings">{{FINDINGS}}</div>
+
+        <div class="empty" id="empty-state" hidden>
+          <div class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="10.8"
+                cy="10.8"
+                r="6.8"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <path
+                d="m16 16 4.5 4.5"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <h3 id="empty-title">No se encontraron resultados</h3>
+          <p id="empty-description">
+            No hay hallazgos que coincidan con los filtros actuales. Prueba con
+            otros términos o restablece los filtros.
+          </p>
+          <button class="clear-button" id="empty-clear" type="button">
+            Restablecer búsqueda
+          </button>
+        </div>
+
+        <p class="results-status" id="visible-count" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span class="footer-brand">Debt<span>Lens</span></span>
+        <span>Informe autocontenido · Análisis estático de deuda técnica</span>
+      </div>
+    </footer>
+
+    <script>
+      (() => {
+        "use strict";
+
+        // Gestor de Tema (Sistema por defecto / Claro / Oscuro)
+        const themeButtons = document.querySelectorAll(".theme-btn");
+        const STORAGE_KEY = "debtlens-theme-mode";
+
+        function applyTheme(theme) {
+          if (theme === "system") {
+            document.documentElement.removeAttribute("data-theme");
+            localStorage.removeItem(STORAGE_KEY);
+          } else {
+            document.documentElement.setAttribute("data-theme", theme);
+            localStorage.setItem(STORAGE_KEY, theme);
+          }
+
+          themeButtons.forEach((btn) => {
+            const isActive = btn.dataset.themeVal === theme;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-checked", isActive ? "true" : "false");
+          });
+        }
+
+        const savedTheme = localStorage.getItem(STORAGE_KEY) || "system";
+        applyTheme(savedTheme);
+
+        themeButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyTheme(btn.dataset.themeVal);
+          });
+        });
+
+        // Filtrado de hallazgos
+        const severityFilter = document.getElementById("severity-filter");
+        const searchFilter = document.getElementById("search-filter");
+        const findingsContainer = document.getElementById("findings");
+        const visibleCount = document.getElementById("visible-count");
+        const resultBadgeCount = document.getElementById("result-badge-count");
+        const emptyState = document.getElementById("empty-state");
+        const emptyTitle = document.getElementById("empty-title");
+        const emptyDescription = document.getElementById("empty-description");
+        const clearButton = document.getElementById("clear-filters");
+        const emptyClearButton = document.getElementById("empty-clear");
+
+        const cards = Array.from(
+          findingsContainer.querySelectorAll(".finding"),
+        );
+
+        function normalize(value) {
+          return value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase();
+        }
+
+        function getSearchableText(card) {
+          return normalize(card.textContent || "");
+        }
+
+        function updateFindings() {
+          const severity = severityFilter.value;
+          const query = normalize(searchFilter.value.trim());
+          let visible = 0;
+
+          for (const card of cards) {
+            const cardSeverity = (card.dataset.severity || "").toLowerCase();
+
+            const matchesSeverity =
+              severity === "all" || cardSeverity === severity;
+
+            const matchesText =
+              query.length === 0 || getSearchableText(card).includes(query);
+
+            const matches = matchesSeverity && matchesText;
+
+            card.hidden = !matches;
+
+            if (matches) {
+              visible++;
+            }
+          }
+
+          const total = cards.length;
+          const hasFilters = severity !== "all" || query.length > 0;
+          const noResults = visible === 0;
+
+          emptyState.hidden = !noResults;
+          clearButton.hidden = !hasFilters;
+
+          if (total === 0) {
+            emptyTitle.textContent = "No hay hallazgos detectados";
+            emptyDescription.textContent =
+              "El informe no contiene resultados para las reglas ejecutadas.";
+            emptyClearButton.hidden = true;
+            visibleCount.textContent = "El análisis no registró hallazgos.";
+          } else if (noResults) {
+            emptyTitle.textContent = "No se encontraron resultados";
+            emptyDescription.textContent =
+              "Ningún hallazgo coincide con los filtros actuales. Cambia la severidad o prueba otros términos.";
+            emptyClearButton.hidden = false;
+            visibleCount.textContent =
+              "No hay resultados para los filtros seleccionados.";
+          } else {
+            emptyClearButton.hidden = true;
+            visibleCount.textContent = hasFilters
+              ? `Mostrando ${visible} de ${total} hallazgos.`
+              : `${total} hallazgos disponibles.`;
+          }
+
+          resultBadgeCount.textContent = String(visible);
+        }
+
+        function clearFilters() {
+          severityFilter.value = "all";
+          searchFilter.value = "";
+          updateFindings();
+          searchFilter.focus();
+        }
+
+        severityFilter.addEventListener("change", updateFindings);
+        searchFilter.addEventListener("input", updateFindings);
+        clearButton.addEventListener("click", clearFilters);
+        emptyClearButton.addEventListener("click", clearFilters);
+
+        for (const [index, card] of cards.entries()) {
+          card.style.animationDelay = `${Math.min(index * 45, 360)}ms`;
+        }
+
+        updateFindings();
+      })();
+    </script>
+  </body>
+</html>

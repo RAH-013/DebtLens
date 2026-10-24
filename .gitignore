@@ -1,0 +1,23 @@
+# Rust build artifacts
+/target/
+
+# Generated analysis reports
+/reports/
+/dl-report.json
+/tda-report.json
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating system
+.DS_Store
+Thumbs.db
