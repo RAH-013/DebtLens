@@ -1,207 +1,180 @@
-# DebtLens
+# DebtLens (`dl`)
 
-**Analizador estático de deuda técnica para proyectos de software.**
+**Herramienta CLI de auditoría híbrida de deuda técnica que combina análisis estático AST con evaluación semántica impulsada por Google Gemini.**
 
-debtLens es una herramienta de línea de comandos desarrollada en Rust para inspeccionar proyectos, recopilar métricas del código fuente e identificar posibles problemas de mantenibilidad. Permite ejecutar análisis desde la terminal y generar reportes para consultar los resultados posteriormente.
+DebtLens (`dl`) inspecciona repositorios de código fuente desde la terminal para cuantificar su mantenibilidad, calcular un índice de deuda técnica y detectar riesgos estructurales o de diseño. Integra un motor determinista basado en árboles de sintaxis abstracta (Tree-sitter) con una capa de auditoría semántica mediante Google Gemini, exportando los resultados en JSON o en un único reporte HTML portátil y autocontenido.
 
-## Características
+---
 
-- Recorrido recursivo del directorio del proyecto.
-- Análisis de archivos JavaScript.
-- Detección de funciones y recopilación de métricas.
-- Medición de complejidad ciclomática y profundidad de anidamiento.
-- Detección de errores sintácticos.
-- Identificación de comentarios `TODO` y `FIXME`.
-- Detección de posibles bloques de código duplicado.
-- Generación de reportes JSON y HTML.
-- Modo detallado para consultar información adicional.
-- Exclusión de directorios que normalmente contienen dependencias o archivos generados.
+## Características principales
+
+### Motor de análisis estático (AST)
+
+- **Recorrido inteligente de proyectos:** Exploración recursiva con exclusión automática de dependencias, cachés y artefactos de compilación.
+- **Métricas de funciones:** Cálculo de líneas de código, cantidad de parámetros, complejidad ciclomática y profundidad máxima de anidamiento.
+- **Diagnóstico sintáctico:** Detección precisa de errores de sintaxis por archivo y línea mediante Tree-sitter.
+- **Marcadores de deuda:** Identificación y catalogación de comentarios `TODO` y `FIXME`.
+- **Detección de código duplicado (`CODE001`):** Localización de secuencias repetidas mediante normalización de tokens del árbol sintáctico, adjuntando ubicaciones relacionadas y fragmentos de contexto.
+- **Índice de deuda técnica:** Puntuación normalizada (`0`–`100`), clasificación por nivel de severidad (`Baja`, `Moderada`, `Alta`, `Crítica`) y densidad de hallazgos por cada 1,000 líneas de código.
+
+### Auditoría semántica con Google Gemini
+
+- **Configuración integrada (`dl ai setup`):** Asistente en línea de comandos para vincular y gestionar el acceso a Google Gemini sin depender de configuraciones externas.
+- **Resumen ejecutivo:** Evaluación global de mantenibilidad, descripción del proyecto, riesgos principales, problemas críticos o de alta prioridad y acciones recomendadas.
+- **Triaje inteligente de hallazgos estáticos:** Reevaluación contextual de cada regla detectada con asignación de prioridad real, porcentaje de confianza, explicación de impacto, propuesta de solución y alertas de **posible falso positivo**.
+- **Hallazgos semánticos adicionales:** Detección de problemas de diseño, acoplamiento o lógica que trascienden las reglas sintácticas tradicionales, con evidencia, rango de líneas y contexto de código fuente.
+- **Caché local y telemetría de tokens:** Reutilización de análisis previos desde caché local para optimizar consumo y reporte detallado de tokens utilizados (entrada, salida y cuota restante de la API en tiempo real).
+
+### Reportes portátiles y visualización
+
+- **Salida dual:** Generación de reportes estructurados en JSON y paneles interactivos en HTML.
+- **Archivo HTML único y autocontenido (`report.html`):** Todos los estilos (`layout.css` + `style.css`), los 17 iconos SVG (convertidos a _Data URIs_ Base64) y la lógica JavaScript (codificada en Base64) se incrustan y minifican en un solo archivo portátil sin carpetas ni dependencias auxiliares.
+- **Dashboard interactivo:** Indicador visual tipo termómetro que cambia progresivamente de verde a rojo según el puntaje de deuda (`0`–`100`), tarjetas KPI con semántica visual por estado, filtros en tiempo real por origen (`Regla estática` / `Hallazgo semántico`), severidad o texto libre, selector de tema (`Sistema`, `Claro`, `Oscuro`) y diseño responsive desde `320px`.
+
+---
 
 ## Requisitos
 
-- Rust y Cargo instalados.
-- Un proyecto que contenga archivos compatibles con el analizador.
-- Acceso de lectura al directorio que se desea analizar.
+- **Rust y Cargo** instalados en el sistema (`rustc` y `cargo`).
+- Permisos de lectura sobre el directorio del proyecto que se desea auditar.
+- _(Opcional)_ Una clave de API de Google Gemini configurada mediante `dl ai setup` para habilitar el análisis semántico.
 
-## Instalación y compilación
+---
 
-Clona el repositorio o accede al directorio del proyecto:
+## Instalación y actualización
 
-```bash
-cd ~/Desktop/DL
-```
-
-Compila la herramienta:
+1. Accede al directorio raíz del código fuente de DebtLens:
 
 ```bash
-cargo build
+cd <RUTA_DEL_REPOSITORIO_DEBTLENS>
 ```
 
-Para compilar una versión optimizada:
+2. Compila e instala el binario `dl` de forma global en tu entorno:
 
 ```bash
 cargo build --release
+cargo install --path .
 ```
 
-El ejecutable se genera en:
+3. Para actualizar el binario tras incorporar cambios en el código fuente:
+
+```bash
+cargo build --release && cargo install --path . --force
+```
+
+4. Verifica que el ejecutable esté disponible en tu `PATH`:
+
+```bash
+dl --version
+```
+
+---
+
+## Configuración de IA (Google Gemini)
+
+Para habilitar la capa de auditoría semántica, ejecuta el asistente de configuración integrado:
+
+```bash
+dl ai setup
+```
+
+Para consultar las opciones disponibles dentro del subcomando de inteligencia artificial:
+
+```bash
+dl ai --help
+```
+
+### Comportamiento durante el análisis
+
+- **Con IA configurada:** `dl` ejecuta el escaneo estático y envía el contexto estructurado a Google Gemini para generar el resumen ejecutivo, reevaluar los hallazgos existentes y detectar nuevos hallazgos semánticos. Si existe un resultado previo válido, lo recupera desde la **caché local**.
+- **Sin IA configurada o sin conexión:** `dl` continúa operando en modo de **análisis estático** sin interrumpir la ejecución, informando el estado del motor semántico en el panel correspondiente del reporte.
+
+---
+
+## Sintaxis y opciones
 
 ```text
-target/debug/dl
+dl [OPCIONES] <RUTA_DEL_PROYECTO>
 ```
 
-La versión optimizada se encuentra en:
+El argumento `<RUTA_DEL_PROYECTO>` es obligatorio e indica el directorio raíz del proyecto que será analizado.
 
-```text
-target/release/dl
-```
+| Opción                      | Descripción                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `-o, --output <DIRECTORIO>` | Define el directorio de destino donde se guardarán los reportes generados.                  |
+| `--html`                    | Genera el reporte interactivo autocontenido `report.html`. Requiere especificar `--output`. |
+| `-v, --verbose`             | Amplía el nivel de detalle en la salida de consola y conserva metadatos completos en JSON.  |
+| `-h, --help`                | Muestra la ayuda general y la referencia de comandos y opciones disponibles.                |
+| `-V, --version`             | Muestra la versión instalada de `dl`.                                                       |
 
-También es posible ejecutar la herramienta directamente mediante Cargo, sin tener que invocar el binario manualmente.
+---
 
-## Sintaxis general
+## Guía de uso
 
-```text
-dl [OPTIONS] <PROJECT_PATH>
-```
-
-El argumento `PROJECT_PATH` es obligatorio y especifica el directorio raíz del proyecto que se analizará.
-
-### Opciones disponibles
-
-| Opción                     | Descripción                                                                      |
-| -------------------------- | -------------------------------------------------------------------------------- |
-| `-o, --output <DIRECTORY>` | Especifica el directorio de salida de los reportes.                              |
-| `--html`                   | Habilita la generación del reporte HTML. Requiere `--output`.                    |
-| `-v, --verbose`            | Muestra información adicional durante el análisis y en los reportes compatibles. |
-| `-h, --help`               | Muestra la ayuda de la herramienta.                                              |
-| `-V, --version`            | Muestra la versión instalada.                                                    |
-
-## Modos de uso
-
-### 1. Consultar la ayuda
-
-Permite conocer los argumentos y opciones disponibles sin analizar un proyecto.
-
-Con Cargo:
+### 1. Consulta de ayuda y versión
 
 ```bash
-cargo run -- --help
+dl --help
+dl --version
 ```
 
-Consultar la versión:
+### 2. Auditoría rápida en terminal
+
+Ejecuta el análisis directamente sobre la ruta del proyecto objetivo para obtener un resumen inmediato sin escribir archivos en disco:
 
 ```bash
-cargo run -- --version
+dl <RUTA_DEL_PROYECTO>
 ```
 
-### 2. Análisis básico por terminal
+### 3. Exportación de reportes en directorio de salida
 
-Ejecuta el análisis sin especificar un directorio de salida:
+Utiliza `--output` (`-o`) para almacenar los resultados del análisis en una ubicación específica:
 
 ```bash
-cargo run -- ../To-Do-Backend
+dl <RUTA_DEL_PROYECTO> --output <DIRECTORIO_DE_SALIDA>
 ```
 
-La herramienta recorre el proyecto, analiza los archivos compatibles y muestra los resultados en la terminal.
+### 4. Generación de reporte HTML portátil
 
-Este modo es útil para realizar comprobaciones rápidas sin generar archivos de reporte.
-
-### 3. Análisis con reporte de salida
-
-Para guardar los resultados, utiliza `--output` y especifica el directorio donde deseas almacenarlos:
+Combina `--output` y `--html` para producir un único archivo `report.html` listo para abrir en cualquier navegador o compartir sin archivos adicionales:
 
 ```bash
-cargo run -- ../To-Do-Backend --output ./reports
+dl <RUTA_DEL_PROYECTO> --output <DIRECTORIO_DE_SALIDA> --html
 ```
 
-El directorio de salida se utiliza para generar los reportes que admite la configuración actual de la herramienta.
-
-Si ejecutas varios análisis, puedes utilizar directorios diferentes para separar sus resultados:
+Para abrir el reporte generado desde Linux:
 
 ```bash
-cargo run -- ../ProyectoA --output ./reports/proyecto-a
-cargo run -- ../ProyectoB --output ./reports/proyecto-b
+xdg-open <DIRECTORIO_DE_SALIDA>/report.html
 ```
 
-### 4. Generación de reporte HTML
+> **Nota:** La bandera `--html` depende de `--output` y no debe invocarse de forma aislada.
 
-La opción `--html` habilita la generación de un reporte HTML:
+### 5. Análisis detallado (`--verbose`)
 
-```bash
-cargo run -- ../To-Do-Backend --output ./reports --html
-```
-
-El reporte permite consultar los resultados mediante un navegador web.
-
-Si la herramienta genera `reports/report.html`, puedes abrirlo en Linux con:
+Activa `--verbose` (`-v`) para inspeccionar información extendida durante la ejecución y conservar el detalle completo por archivo en el reporte JSON:
 
 ```bash
-xdg-open ./reports/report.html
-```
-
-La ruta anterior corresponde al directorio de salida del ejemplo. Si utilizas otro directorio, ajusta la ruta del archivo.
-
-**Importante:** `--html` requiere `--output`; no debe utilizarse de forma aislada.
-
-### 5. Modo detallado
-
-Utiliza `--verbose` para ampliar la información que muestra la herramienta y la que incorpora a los reportes compatibles:
-
-```bash
-cargo run -- ../To-Do-Backend --verbose
-```
-
-También puedes combinarlo con la generación de reportes:
-
-```bash
-cargo run -- ../To-Do-Backend \
-    --output ./reports \
+dl <RUTA_DEL_PROYECTO> \
+    --output <DIRECTORIO_DE_SALIDA> \
     --html \
     --verbose
 ```
 
-Este modo es útil cuando necesitas examinar los hallazgos con mayor detalle, incluyendo fragmentos de código cuando corresponda.
+### 6. Ejecución sobre el directorio de trabajo actual
 
-### 6. Ejecución del binario compilado
-
-Una vez compilada la herramienta, no es necesario ejecutar Cargo cada vez.
-
-En modo de desarrollo:
+Con `dl` instalado en el sistema, puedes situarte dentro del repositorio a auditar y pasar `.` como ruta objetivo:
 
 ```bash
-./target/debug/dl ../To-Do-Backend
+cd <RUTA_DEL_PROYECTO>
+dl . --output <DIRECTORIO_DE_SALIDA> --html
 ```
 
-Con reportes HTML:
+---
 
-```bash
-./target/debug/dl ../To-Do-Backend \
-    --output ./reports \
-    --html
-```
+## Exclusiones predeterminadas
 
-Con la versión optimizada:
-
-```bash
-./target/release/dl ../To-Do-Backend \
-    --output ./reports \
-    --html \
-    --verbose
-```
-
-### 7. Analizar el directorio actual
-
-Si deseas analizar el proyecto desde su propio directorio:
-
-```bash
-cd ../To-Do-Backend
-cargo run --manifest-path ../DL/Cargo.toml -- .
-```
-
-En este ejemplo, `../DL/Cargo.toml` debe apuntar al archivo `Cargo.toml` de debtLens. Ajusta la ruta si tu organización de directorios es diferente.
-
-## Exclusión de directorios
-
-Para evitar analizar dependencias y archivos generados que pueden añadir ruido al resultado, el recorrido omite los siguientes directorios:
+Durante el recorrido del árbol de directorios, `dl` omite automáticamente las siguientes carpetas para evitar ruido proveniente de dependencias o código generado:
 
 - `.git`
 - `node_modules`
@@ -213,114 +186,41 @@ Para evitar analizar dependencias y archivos generados que pueden añadir ruido 
 - `.cache`
 - `vendor`
 
-La exclusión se aplica durante el recorrido del proyecto.
+---
 
-## Métricas recopiladas
+## Métricas y criterios de evaluación
 
-### Funciones
+| Categoría                   | Descripción técnica                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Índice de deuda**         | Puntuación compuesta (`0`–`100`) ponderada por severidad, densidad de hallazgos y métricas estructurales.          |
+| **Complejidad de función**  | Evalúa longitud en líneas, número de parámetros, complejidad ciclomática y profundidad de anidamiento por función. |
+| **Errores sintácticos**     | Identifica fallos de gramática mediante Tree-sitter indicando el archivo y la línea exacta del problema.           |
+| **Marcadores pendientes**   | Extrae comentarios `TODO` y `FIXME` para visibilizar compromisos técnicos documentados en el código.               |
+| **Duplicación (`CODE001`)** | Detecta bloques de instrucciones estructuralmente equivalentes mediante normalización de tokens AST.               |
 
-El analizador registra información como:
+### Interpretación de resultados
 
-- Nombre de la función, cuando puede identificarse.
-- Línea inicial y final.
-- Número de líneas.
-- Cantidad de parámetros.
-- Complejidad ciclomática.
-- Profundidad máxima de anidamiento.
+Las severidades, puntuaciones y hallazgos deben utilizarse como **indicadores de priorización técnica** y no como métricas absolutas de defectos en producción. Antes de aplicar una refactorización, evalúa:
 
-Estas métricas permiten identificar funciones que podrían requerir una revisión manual por su tamaño o complejidad.
+1. Si los bloques marcados como duplicados comparten realmente la misma regla de negocio o solo coinciden estructuralmente.
+2. Si extraer una abstracción común reduce la complejidad sin introducir acoplamiento innecesario entre módulos.
+3. Si las sugerencias generadas por Gemini IA preservan los efectos secundarios y contratos existentes del sistema.
 
-### Errores sintácticos
+---
 
-Tree-sitter permite detectar errores sintácticos y registrar las líneas donde aparecen. Esta información ayuda a localizar posibles problemas de estructura en el código.
+## Alcance y limitaciones conocidas
 
-La ausencia de errores sintácticos no demuestra que el programa funcione correctamente.
+- **Lenguajes soportados:** El escáner estático procesa archivos con extensión `.js`, `.jsx`, `.mjs` y `.cjs`. El soporte para TypeScript, TSX, HTML y CSS requiere incorporar sus respectivas gramáticas al analizador.
+- **Análisis estático vs. ejecución:** DebtLens no compila ni ejecuta el código auditado; sus hallazgos no sustituyen las pruebas unitarias, de integración ni la revisión de código por pares.
+- **Detección heurística de duplicados:** La regla `CODE001` identifica coincidencias sobre tokens normalizados, por lo que puede omitir duplicaciones con estructuras sintácticas distintas o señalar similitudes accidentales (filtrables mediante el triaje de confianza de Gemini IA).
 
-### Marcadores de trabajo pendiente
-
-Se identifican los marcadores `TODO` y `FIXME` presentes en comentarios.
-
-Por ejemplo:
-
-```javascript
-// TODO: implementar validación adicional
-
-/*
- * FIXME: corregir el tratamiento de errores
- */
-```
-
-Los marcadores encontrados incluyen su tipo y la línea correspondiente.
-
-### Código duplicado
-
-La regla `CODE001` busca secuencias repetidas de instrucciones que pueden representar oportunidades de refactorización.
-
-La implementación utiliza el árbol sintáctico de JavaScript para identificar instrucciones y normalizar sus tokens. Aplica filtros para reducir falsos positivos causados por coincidencias triviales de sintaxis.
-
-Un hallazgo es una señal para investigar, no una prueba automática de que exista deuda técnica.
-
-## Interpretación de los resultados
-
-Los hallazgos incluyen información como la regla que los generó, su descripción, la ubicación y una recomendación de revisión. Según el tipo de hallazgo, también pueden incluir una clasificación de severidad y ubicaciones adicionales.
-
-Las severidades deben interpretarse como indicadores de prioridad, no como una medición objetiva del impacto real en producción.
-
-Se recomienda revisar cada hallazgo considerando:
-
-- Si el comportamiento repetido realmente es equivalente.
-- Si extraer una función compartida simplificaría el mantenimiento.
-- Si las diferencias entre bloques son intencionales.
-- Si una función extensa está dividida en responsabilidades coherentes.
-- Si las condiciones y efectos secundarios se conservarían después de una refactorización.
-
-No es recomendable modificar código únicamente para reducir el número de hallazgos.
-
-## Limitaciones conocidas
-
-### Lenguajes compatibles
-
-La configuración actual del scanner acepta estas extensiones:
-
-- `.js`
-- `.jsx`
-- `.mjs`
-- `.cjs`
-
-Aunque JSX se admite mediante la gramática JavaScript, el análisis estático no sustituye la compilación ni la validación del framework correspondiente.
-
-TypeScript, TSX, HTML y CSS no están habilitados por el scanner actual. Incorporarlos requiere registrar sus gramáticas y desarrollar analizadores compatibles con el modelo común de resultados.
-
-### Detección de duplicados
-
-La detección utiliza coincidencias de tokens normalizados dentro de secuencias de instrucciones. Por lo tanto:
-
-- Puede detectar bloques repetidos con diferencias de formato o comentarios.
-- No garantiza detectar código equivalente con nombres de variables diferentes.
-- No demuestra que dos bloques tengan el mismo comportamiento.
-- Puede omitir duplicaciones que no superen los filtros establecidos.
-- Puede producir falsos positivos en coincidencias sintácticas suficientemente extensas.
-
-La detección debe seguir mejorándose mediante pruebas de regresión con proyectos reales.
-
-### Análisis estático
-
-debtLens no ejecuta el programa analizado ni comprueba su comportamiento durante la ejecución. Sus métricas tampoco demuestran por sí solas que una función sea difícil de mantener o que un fragmento repetido deba refactorizarse.
+---
 
 ## Flujo de trabajo recomendado
 
-Para utilizar la herramienta de manera práctica:
-
-1. Ejecuta un análisis básico para comprobar que el proyecto se recorre correctamente.
-2. Genera un reporte cuando necesites conservar los resultados.
-3. Activa el modo detallado para investigar hallazgos concretos.
-4. Revisa las ubicaciones y compara el código fuente original.
-5. Prioriza los problemas confirmados y aplica cambios de forma controlada.
-6. Ejecuta las pruebas del proyecto después de cada modificación.
-7. Repite el análisis para comparar los resultados antes y después.
-
-## Conclusión
-
-debtLens automatiza una primera revisión estática de proyectos JavaScript mediante métricas de funciones, complejidad, errores sintácticos, marcadores de trabajo pendiente y posibles duplicaciones. Su interfaz de línea de comandos permite ejecutar análisis rápidos y generar reportes para documentar los resultados.
-
-Sin embargo, **no sustituye una revisión de código, las pruebas automatizadas ni la validación del comportamiento del programa**. No demuestra que una implementación sea correcta, no identifica necesariamente toda la deuda técnica y no puede determinar de forma infalible cuándo una duplicación debe refactorizarse. Sus resultados deben utilizarse como orientación para investigar y mejorar la mantenibilidad del software, no como decisiones automáticas.
+1. **Configuración inicial:** Ejecuta `dl ai setup` si deseas habilitar el análisis semántico con Google Gemini.
+2. **Exploración rápida:** Ejecuta `dl <RUTA_DEL_PROYECTO>` para validar el alcance del escaneo y revisar las métricas generales en consola.
+3. **Auditoría visual:** Genera el reporte portátil con `dl <RUTA_DEL_PROYECTO> -o <DIRECTORIO_DE_SALIDA> --html` y revisa el índice de deuda junto con el resumen ejecutivo.
+4. **Priorización:** Filtra por severidad crítica o alta y revisa los hallazgos confirmados por Gemini IA, descartando posibles falsos positivos.
+5. **Refactorización controlada:** Inspecciona los fragmentos de código resaltados, aplica mejoras incrementales y ejecuta la suite de pruebas del proyecto.
+6. **Verificación de mejora:** Vuelve a ejecutar `dl` para contrastar la reducción en el índice de deuda y la densidad de hallazgos.
