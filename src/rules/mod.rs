@@ -8,7 +8,9 @@ pub mod rule;
 pub mod syntax;
 pub mod todo;
 
-use crate::model::{AnalysisReport, ProjectAnalysis};
+use crate::model::{
+    AiStatusSummary, AnalysisReport, Finding, ProjectAnalysis, calculate_technical_debt_index,
+};
 use crate::rules::duplicate_code::DuplicateCodeRule;
 use crate::rules::file_length::FileLengthRule;
 use crate::rules::function_complexity::FunctionComplexityRule;
@@ -32,11 +34,33 @@ pub fn default_rules() -> Vec<Box<dyn Rule>> {
     ]
 }
 
-pub fn analyze(analysis: ProjectAnalysis) -> AnalysisReport {
-    let findings = default_rules()
-        .iter()
-        .flat_map(|rule| rule.evaluate(&analysis))
-        .collect();
+pub fn analyze_with_progress<F>(
+    analysis: ProjectAnalysis,
+    mut on_rule_evaluated: F,
+) -> AnalysisReport
+where
+    F: FnMut(usize, usize),
+{
+    let rules = default_rules();
+    let total_rules = rules.len();
+    let mut findings: Vec<Finding> = Vec::new();
 
-    AnalysisReport { analysis, findings }
+    for (idx, rule) in rules.iter().enumerate() {
+        findings.extend(rule.evaluate(&analysis));
+        on_rule_evaluated(idx + 1, total_rules);
+    }
+
+    for (index, finding) in findings.iter_mut().enumerate() {
+        finding.id = Some(format!("F{:03}", index + 1));
+    }
+
+    let debt_index = calculate_technical_debt_index(&analysis, &findings, None);
+
+    AnalysisReport {
+        analysis,
+        findings,
+        debt_index,
+        ai_status: AiStatusSummary::disabled(),
+        ai_analysis: None,
+    }
 }

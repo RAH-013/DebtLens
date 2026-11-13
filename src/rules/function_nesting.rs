@@ -29,6 +29,7 @@ impl Rule for FunctionNestingRule {
                     .iter()
                     .filter(|function| function.nesting_depth > self.max_depth)
                     .map(|function| Finding {
+                id: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(

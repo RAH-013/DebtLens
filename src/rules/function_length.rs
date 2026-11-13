@@ -29,6 +29,7 @@ impl Rule for FunctionLengthRule {
                     .iter()
                     .filter(|function| function.lines > self.max_lines)
                     .map(|function| Finding {
+                id: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(

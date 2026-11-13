@@ -26,6 +26,7 @@ impl Rule for FileLengthRule {
             .iter()
             .filter(|file| file.lines > self.max_lines)
             .map(|file| Finding {
+                id: None,
                 rule_id: self.id().to_string(),
                 title: self.name().to_string(),
                 description: format!(

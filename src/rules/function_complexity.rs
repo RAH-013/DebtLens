@@ -29,6 +29,7 @@ impl Rule for FunctionComplexityRule {
                     let complexity = function.complexity?;
 
                     (complexity > self.max_complexity).then(|| Finding {
+                        id: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(

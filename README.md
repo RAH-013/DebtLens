@@ -98,7 +98,7 @@ cargo run -- --version
 Ejecuta el análisis sin especificar un directorio de salida:
 
 ```bash
-cargo run -- ../To-Do-Love-Backend
+cargo run -- ../To-Do-Backend
 ```
 
 La herramienta recorre el proyecto, analiza los archivos compatibles y muestra los resultados en la terminal.
@@ -110,7 +110,7 @@ Este modo es útil para realizar comprobaciones rápidas sin generar archivos de
 Para guardar los resultados, utiliza `--output` y especifica el directorio donde deseas almacenarlos:
 
 ```bash
-cargo run -- ../To-Do-Love-Backend --output ./reports
+cargo run -- ../To-Do-Backend --output ./reports
 ```
 
 El directorio de salida se utiliza para generar los reportes que admite la configuración actual de la herramienta.
@@ -127,7 +127,7 @@ cargo run -- ../ProyectoB --output ./reports/proyecto-b
 La opción `--html` habilita la generación de un reporte HTML:
 
 ```bash
-cargo run -- ../To-Do-Love-Backend --output ./reports --html
+cargo run -- ../To-Do-Backend --output ./reports --html
 ```
 
 El reporte permite consultar los resultados mediante un navegador web.
@@ -147,13 +147,13 @@ La ruta anterior corresponde al directorio de salida del ejemplo. Si utilizas ot
 Utiliza `--verbose` para ampliar la información que muestra la herramienta y la que incorpora a los reportes compatibles:
 
 ```bash
-cargo run -- ../To-Do-Love-Backend --verbose
+cargo run -- ../To-Do-Backend --verbose
 ```
 
 También puedes combinarlo con la generación de reportes:
 
 ```bash
-cargo run -- ../To-Do-Love-Backend \
+cargo run -- ../To-Do-Backend \
     --output ./reports \
     --html \
     --verbose
@@ -168,13 +168,13 @@ Una vez compilada la herramienta, no es necesario ejecutar Cargo cada vez.
 En modo de desarrollo:
 
 ```bash
-./target/debug/dl ../To-Do-Love-Backend
+./target/debug/dl ../To-Do-Backend
 ```
 
 Con reportes HTML:
 
 ```bash
-./target/debug/dl ../To-Do-Love-Backend \
+./target/debug/dl ../To-Do-Backend \
     --output ./reports \
     --html
 ```
@@ -182,7 +182,7 @@ Con reportes HTML:
 Con la versión optimizada:
 
 ```bash
-./target/release/dl ../To-Do-Love-Backend \
+./target/release/dl ../To-Do-Backend \
     --output ./reports \
     --html \
     --verbose
@@ -193,7 +193,7 @@ Con la versión optimizada:
 Si deseas analizar el proyecto desde su propio directorio:
 
 ```bash
-cd ../To-Do-Love-Backend
+cd ../To-Do-Backend
 cargo run --manifest-path ../DL/Cargo.toml -- .
 ```
 

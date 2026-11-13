@@ -85,6 +85,7 @@ impl Rule for DuplicateCodeRule {
             let location_count = consolidated.len();
 
             findings.push(Finding {
+                id: None,
                 rule_id: self.id().to_string(),
                 title: self.name().to_string(),
                 description: format!(

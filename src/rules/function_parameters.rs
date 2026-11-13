@@ -29,6 +29,7 @@ impl Rule for FunctionParametersRule {
                     let parameters = function.parameters?;
 
                     (parameters > self.max_parameters).then(|| Finding {
+                        id: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(
