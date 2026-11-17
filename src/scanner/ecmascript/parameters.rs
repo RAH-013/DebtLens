@@ -1,5 +1,21 @@
 use tree_sitter::Node;
 
+/// Nodos que representan un parámetro individual en las gramáticas
+/// JavaScript y TypeScript.
+fn is_parameter_node(kind: &str) -> bool {
+    matches!(
+        kind,
+        "identifier"
+            | "assignment_pattern"
+            | "object_pattern"
+            | "array_pattern"
+            | "rest_pattern"
+            | "required_parameter"
+            | "optional_parameter"
+            | "this_parameter"
+    )
+}
+
 pub(super) fn find_parameters(node: Node<'_>) -> Option<Node<'_>> {
     let mut cursor = node.walk();
 
@@ -19,16 +35,6 @@ pub(super) fn find_parameters(node: Node<'_>) -> Option<Node<'_>> {
             ) {
                 return Some(child);
             }
-
-            if child.kind() == "parenthesized_expression" {
-                let mut inner_cursor = child.walk();
-
-                for inner in child.children(&mut inner_cursor) {
-                    if inner.kind() == "formal_parameters" {
-                        return Some(inner);
-                    }
-                }
-            }
         }
     }
 
@@ -36,10 +42,8 @@ pub(super) fn find_parameters(node: Node<'_>) -> Option<Node<'_>> {
 }
 
 pub(super) fn count_parameters(node: Node<'_>) -> usize {
-    if matches!(
-        node.kind(),
-        "identifier" | "object_pattern" | "array_pattern"
-    ) {
+    // `required_parameter` / `optional_parameter` envuelven un único parámetro.
+    if is_parameter_node(node.kind()) && node.kind() != "assignment_pattern" {
         return 1;
     }
 
@@ -47,14 +51,7 @@ pub(super) fn count_parameters(node: Node<'_>) -> usize {
     let mut cursor = node.walk();
 
     for child in node.children(&mut cursor) {
-        if matches!(
-            child.kind(),
-            "identifier"
-                | "assignment_pattern"
-                | "object_pattern"
-                | "array_pattern"
-                | "rest_pattern"
-        ) {
+        if is_parameter_node(child.kind()) {
             count += 1;
         }
     }

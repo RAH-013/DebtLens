@@ -23,7 +23,7 @@ DebtLens (`dl`) inspecciona repositorios de código fuente desde la terminal par
 - **Resumen ejecutivo:** Evaluación global de mantenibilidad, descripción del proyecto, riesgos principales, problemas críticos o de alta prioridad y acciones recomendadas.
 - **Triaje inteligente de hallazgos estáticos:** Reevaluación contextual de cada regla detectada con asignación de prioridad real, porcentaje de confianza, explicación de impacto, propuesta de solución y alertas de **posible falso positivo**.
 - **Hallazgos semánticos adicionales:** Detección de problemas de diseño, acoplamiento o lógica que trascienden las reglas sintácticas tradicionales, con evidencia, rango de líneas y contexto de código fuente.
-- **Caché local y telemetría de tokens:** Reutilización de análisis previos desde caché local para optimizar consumo y reporte detallado de tokens utilizados (entrada, salida y cuota restante de la API en tiempo real).
+- **Caché en memoria y telemetría de tokens:** Reutilización de análisis previos dentro de la misma sesión desde una caché **volátil en RAM** (sin escritura en disco) para optimizar consumo y reporte detallado de tokens utilizados (entrada, salida y cuota restante de la API en tiempo real).
 
 ### Reportes portátiles y visualización
 
@@ -86,7 +86,7 @@ dl ai --help
 
 ### Comportamiento durante el análisis
 
-- **Con IA configurada:** `dl` ejecuta el escaneo estático y envía el contexto estructurado a Google Gemini para generar el resumen ejecutivo, reevaluar los hallazgos existentes y detectar nuevos hallazgos semánticos. Si existe un resultado previo válido, lo recupera desde la **caché local**.
+- **Con IA configurada:** `dl` ejecuta el escaneo estático y envía el contexto estructurado a Google Gemini para generar el resumen ejecutivo, reevaluar los hallazgos existentes y detectar nuevos hallazgos semánticos. Si existe un resultado previo válido en la **caché en memoria** de la sesión, lo reutiliza sin volver a consultar la API.
 - **Sin IA configurada o sin conexión:** `dl` continúa operando en modo de **análisis estático** sin interrumpir la ejecución, informando el estado del motor semántico en el panel correspondiente del reporte.
 
 ---

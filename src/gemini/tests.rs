@@ -409,15 +409,16 @@ fn deduplicates_findings_and_computes_deterministic_debt_index() {
 
 #[test]
 fn cache_reuses_and_invalidates_on_changes() {
+    let _guard = AnalysisCache::test_guard();
+    AnalysisCache::reset();
     let dir = TempDir::new("cache");
-    let cache_dir = TempDir::new("cache_store");
     let (mut analysis, findings) = sample_project(&dir.path);
     let limits = AiLimitsConfig::default();
 
     let ctx1 = build_project_context(&analysis, &findings, &limits, "gemini-3.8-flash").unwrap();
     let ai = parse_and_validate_response(valid_gemini_json(), "gemini-3.8-flash", &ctx1).unwrap();
 
-    let cache = AnalysisCache::new(cache_dir.path.clone(), true);
+    let cache = AnalysisCache::new(true);
     let key1 = AnalysisCache::compute_key(&ctx1, "gemini-3.8-flash", PROMPT_VERSION, &limits);
     cache.put(&key1, &ai).unwrap();
 
@@ -447,8 +448,9 @@ fn cache_reuses_and_invalidates_on_changes() {
 
 #[test]
 fn enforces_single_request_cache_hit_and_fallback_behavior() {
+    let _guard = AnalysisCache::test_guard();
+    AnalysisCache::reset();
     let dir = TempDir::new("analyzer");
-    let cache_dir = TempDir::new("analyzer_cache");
     let (analysis, findings) = sample_project(&dir.path);
 
     let mut cfg = AppConfig {
@@ -473,7 +475,6 @@ fn enforces_single_request_cache_hit_and_fallback_behavior() {
         &findings,
         &store,
         &transport,
-        Some(cache_dir.path.clone()),
     );
     assert_eq!(out_disabled.status.state, AiExecutionState::Disabled);
     assert_eq!(transport.call_count(), 0);
@@ -485,7 +486,6 @@ fn enforces_single_request_cache_hit_and_fallback_behavior() {
         &findings,
         &store,
         &transport,
-        Some(cache_dir.path.clone()),
     );
     assert_eq!(out_live.status.state, AiExecutionState::Completed);
     assert_eq!(transport.call_count(), 1);
@@ -496,7 +496,6 @@ fn enforces_single_request_cache_hit_and_fallback_behavior() {
         &findings,
         &store,
         &transport,
-        Some(cache_dir.path.clone()),
     );
     assert_eq!(out_cached.status.state, AiExecutionState::Cached);
     assert_eq!(transport.call_count(), 1);
@@ -522,7 +521,6 @@ fn enforces_single_request_cache_hit_and_fallback_behavior() {
         &findings,
         &store,
         &failing_transport,
-        Some(cache_dir.path.clone()),
     );
     assert_eq!(out_fail.status.state, AiExecutionState::FailedFallback);
     assert!(out_fail.analysis.is_none());

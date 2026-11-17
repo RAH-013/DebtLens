@@ -235,6 +235,7 @@ impl TermPalette {
     fn severity_tag(&self, severity: Severity) -> String {
         let label = format!("[{}]", format_severity_es(severity));
         match severity {
+            Severity::Critical => self.bold_red(&label),
             Severity::High => self.bold_red(&label),
             Severity::Medium => self.bold_yellow(&label),
             Severity::Low => self.bold_cyan(&label),
@@ -386,7 +387,6 @@ fn run() -> Result<()> {
                 &report.findings,
                 &SystemKeyringStore,
                 &HttpGeminiClient,
-                None,
                 |stage_msg| {
                     progress.update(82, stage_msg);
                 },
@@ -511,9 +511,6 @@ fn run() -> Result<()> {
         check_cancelled()?;
 
         if cli.html {
-            let json_path = output_dir.join("report.json");
-            remove_previous_report(&json_path)?;
-
             let html_path = report::render_html(&raw, &output_dir)?;
             progress.update(100, "Análisis completado.");
             progress.finish();
@@ -531,8 +528,6 @@ fn run() -> Result<()> {
             );
         } else {
             let json_path = output_dir.join("report.json");
-            remove_previous_html_bundle(&output_dir)?;
-
             fs::write(&json_path, raw)
                 .with_context(|| format!("No se pudo escribir {}", json_path.display()))?;
             progress.update(100, "Análisis completado.");
@@ -950,7 +945,7 @@ fn run_ai_status() -> Result<()> {
     println!("  {} {key_status}", palette.dim("API Key:"));
     println!(
         "  {} {}",
-        palette.dim("Caché:"),
+        palette.dim("Caché (RAM, solo sesión):"),
         if config.ai.cache.enabled {
             palette.green("habilitada")
         } else {
@@ -1001,34 +996,6 @@ fn run_ai_remove() -> Result<()> {
     Ok(())
 }
 
-fn remove_previous_report(path: &Path) -> Result<()> {
-    if path.is_file() {
-        fs::remove_file(path).with_context(|| {
-            format!("No se pudo eliminar el informe anterior {}", path.display())
-        })?;
-    }
-
-    Ok(())
-}
-
-fn remove_previous_html_bundle(output_dir: &Path) -> Result<()> {
-    for file in ["report.html", "style.css", "report.js"] {
-        remove_previous_report(&output_dir.join(file))?;
-    }
-
-    let assets_dir = output_dir.join("assets");
-    if assets_dir.is_dir() {
-        fs::remove_dir_all(&assets_dir).with_context(|| {
-            format!(
-                "No se pudo eliminar el directorio anterior {}",
-                assets_dir.display()
-            )
-        })?;
-    }
-
-    Ok(())
-}
-
 fn format_debt_level_es(level: DebtLevel) -> &'static str {
     match level {
         DebtLevel::Low => "Bajo",
@@ -1040,6 +1007,7 @@ fn format_debt_level_es(level: DebtLevel) -> &'static str {
 
 fn format_severity_es(severity: Severity) -> &'static str {
     match severity {
+        Severity::Critical => "Crítica",
         Severity::High => "Alta",
         Severity::Medium => "Media",
         Severity::Low => "Baja",
@@ -1378,8 +1346,12 @@ fn print_code_context(root: &str, file: &str, line: usize) {
         return;
     }
 
-    let start = line.saturating_sub(4);
-    let end = line.saturating_add(3).min(lines.len());
+    // RNF05: mismo contexto simétrico de ±4 líneas que el reporte.
+    let target = line - 1;
+    let start = target.saturating_sub(report::raw::CONTEXT_RADIUS);
+    let end = target
+        .saturating_add(report::raw::CONTEXT_RADIUS + 1)
+        .min(lines.len());
 
     println!("  {}", palette.dim("Código fuente:"));
 
@@ -1391,6 +1363,47 @@ fn print_code_context(root: &str, file: &str, line: usize) {
         } else {
             let prefix = format!("    {number:4} │ ");
             println!("{}{}", palette.dim(&prefix), content);
+        }
+    }
+}
+
+#[cfg(test)]
+mod cli_contract_tests {
+    use super::*;
+
+    #[test]
+    fn parses_documented_invocation() {
+        let cli = Cli::try_parse_from(["dl", ".", "-o", "salida", "--html", "-v"])
+            .expect("la invocación documentada debe seguir siendo válida");
+
+        assert!(cli.html);
+        assert!(cli.verbose);
+        assert_eq!(cli.output.as_deref(), Some(Path::new("salida")));
+        assert_eq!(cli.path.as_deref(), Some(Path::new(".")));
+    }
+
+    #[test]
+    fn html_flag_still_requires_output() {
+        assert!(
+            Cli::try_parse_from(["dl", ".", "--html"]).is_err(),
+            "--html sin --output debe seguir siendo un error"
+        );
+    }
+
+    #[test]
+    fn keeps_ai_subcommands() {
+        for args in [
+            vec!["dl", "ai", "setup"],
+            vec!["dl", "ai", "enable"],
+            vec!["dl", "ai", "disable"],
+            vec!["dl", "ai", "status"],
+            vec!["dl", "ai", "timeout", "30"],
+            vec!["dl", "ai", "remove"],
+        ] {
+            assert!(
+                Cli::try_parse_from(&args).is_ok(),
+                "el subcomando {args:?} debe seguir existiendo"
+            );
         }
     }
 }

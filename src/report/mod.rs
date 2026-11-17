@@ -1,5 +1,5 @@
 mod html;
-mod raw;
+pub mod raw;
 
 use crate::model::AnalysisReport;
 use anyhow::Result;

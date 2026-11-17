@@ -1,12 +1,12 @@
-pub mod javascript;
+pub mod ecmascript;
 
 use anyhow::{Context, Result};
 use ignore::{DirEntry, WalkBuilder};
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use tree_sitter::{Node, Parser};
+use tree_sitter::Node;
 
 use crate::model::{CodeBlockMetric, FileAnalysis, ProjectAnalysis, TodoMarker};
+use ecmascript::EcmaLanguage;
 
 const MIN_DUPLICATE_STATEMENTS: usize = 5;
 const MIN_DUPLICATE_LINES: usize = 5;
@@ -36,14 +36,13 @@ fn should_visit(entry: &DirEntry) -> bool {
     )
 }
 
-fn language_for(path: &Path) -> Option<&'static str> {
-    match path.extension()?.to_str()? {
-        "js" | "jsx" | "mjs" | "cjs" => Some("javascript"),
-        _ => None,
-    }
+fn language_for(path: &Path) -> Option<EcmaLanguage> {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .and_then(EcmaLanguage::from_extension)
 }
 
-fn analyze_file(root: &Path, path: &Path, language: &str) -> Result<FileAnalysis> {
+fn analyze_file(root: &Path, path: &Path, language: EcmaLanguage) -> Result<FileAnalysis> {
     let source = std::fs::read_to_string(path)
         .with_context(|| format!("No se pudo leer {}", path.display()))?;
 
@@ -53,15 +52,16 @@ fn analyze_file(root: &Path, path: &Path, language: &str) -> Result<FileAnalysis
         .to_string_lossy()
         .replace('\\', "/");
 
-    let mut file = match language {
-        "javascript" => javascript::analyze_file(Path::new(&relative_path), &source)?,
-        _ => anyhow::bail!("Lenguaje no compatible: {language}"),
-    };
+    // Un único árbol sintáctico alimenta métricas, comentarios y detección de
+    // clones (antes se parseaba el mismo archivo tres veces).
+    let tree = ecmascript::parse(&source, language)
+        .with_context(|| format!("No se pudo analizar {}", path.display()))?;
 
-    let (_, todo_markers) = collect_comment_data(&source);
+    let mut file = ecmascript::analyze_tree(Path::new(&relative_path), &source, &tree, language);
 
-    file.todo_markers = todo_markers;
-    file.code_blocks = collect_code_blocks(&source);
+    let root_node = tree.root_node();
+    file.todo_markers = collect_comment_data(root_node, &source);
+    file.code_blocks = collect_code_blocks(root_node, &source);
 
     Ok(file)
 }
@@ -81,42 +81,20 @@ fn contains_marker(text: &str, marker: &str) -> bool {
     })
 }
 
-fn collect_comment_data(source: &str) -> (HashSet<usize>, Vec<TodoMarker>) {
-    let mut parser = Parser::new();
-
-    if parser
-        .set_language(&tree_sitter_javascript::LANGUAGE.into())
-        .is_err()
-    {
-        return (HashSet::new(), Vec::new());
-    }
-
-    let Some(tree) = parser.parse(source, None) else {
-        return (HashSet::new(), Vec::new());
-    };
-
-    let mut comment_lines = HashSet::new();
+fn collect_comment_data(node: Node<'_>, source: &str) -> Vec<TodoMarker> {
     let mut markers = Vec::new();
 
-    collect_comment_nodes(tree.root_node(), source, &mut comment_lines, &mut markers);
+    collect_comment_nodes(node, source, &mut markers);
 
     markers.sort_by(|a, b| a.line.cmp(&b.line).then_with(|| a.marker.cmp(&b.marker)));
     markers.dedup_by(|a, b| a.line == b.line && a.marker == b.marker);
 
-    (comment_lines, markers)
+    markers
 }
 
-fn collect_comment_nodes(
-    node: Node<'_>,
-    source: &str,
-    comment_lines: &mut HashSet<usize>,
-    markers: &mut Vec<TodoMarker>,
-) {
+fn collect_comment_nodes(node: Node<'_>, source: &str, markers: &mut Vec<TodoMarker>) {
     if node.kind() == "comment" {
         let start_line = node.start_position().row + 1;
-        let end_line = node.end_position().row + 1;
-
-        comment_lines.extend(start_line..=end_line);
 
         if let Ok(text) = node.utf8_text(source.as_bytes()) {
             for (offset, line) in text.lines().enumerate() {
@@ -138,13 +116,16 @@ fn collect_comment_nodes(
     let mut cursor = node.walk();
 
     for child in node.children(&mut cursor) {
-        collect_comment_nodes(child, source, comment_lines, markers);
+        collect_comment_nodes(child, source, markers);
     }
 }
 
 #[cfg(test)]
 fn collect_todo_markers(source: &str) -> Vec<TodoMarker> {
-    collect_comment_data(source).1
+    let tree = ecmascript::parse(source, EcmaLanguage::JavaScript)
+        .expect("el árbol sintáctico de prueba debe generarse");
+
+    collect_comment_data(tree.root_node(), source)
 }
 
 fn is_executable_statement(node: Node<'_>) -> bool {
@@ -252,22 +233,9 @@ fn collect_statement_blocks(parent: Node<'_>, source: &str, blocks: &mut Vec<Cod
     }
 }
 
-fn collect_code_blocks(source: &str) -> Vec<CodeBlockMetric> {
-    let mut parser = Parser::new();
-
-    if parser
-        .set_language(&tree_sitter_javascript::LANGUAGE.into())
-        .is_err()
-    {
-        return Vec::new();
-    }
-
-    let Some(tree) = parser.parse(source, None) else {
-        return Vec::new();
-    };
-
+fn collect_code_blocks(tree_root: Node<'_>, source: &str) -> Vec<CodeBlockMetric> {
     let mut blocks = Vec::new();
-    collect_statement_blocks(tree.root_node(), source, &mut blocks);
+    collect_statement_blocks(tree_root, source, &mut blocks);
 
     blocks.sort_by(|a, b| {
         a.start_line
@@ -340,6 +308,14 @@ pub fn scan_project(path: &Path) -> Result<ProjectAnalysis> {
 #[cfg(test)]
 mod tests {
     use super::{collect_code_blocks, collect_todo_markers};
+    use crate::scanner::ecmascript::{self, EcmaLanguage};
+
+    fn code_blocks(source: &str) -> Vec<crate::model::CodeBlockMetric> {
+        let tree = ecmascript::parse(source, EcmaLanguage::JavaScript)
+            .expect("el árbol sintáctico de prueba debe generarse");
+
+        collect_code_blocks(tree.root_node(), source)
+    }
 
     #[test]
     fn detects_repeated_sequence_of_statements() {
@@ -361,7 +337,7 @@ function second() {
 }
 "#;
 
-        let blocks = collect_code_blocks(source);
+        let blocks = code_blocks(source);
 
         assert!(blocks.len() >= 2);
         assert!(blocks.iter().any(|block| block.start_line == 3));
@@ -390,8 +366,8 @@ function second() {
 }
 "#;
 
-        let first_blocks = collect_code_blocks(first);
-        let second_blocks = collect_code_blocks(second);
+        let first_blocks = code_blocks(first);
+        let second_blocks = code_blocks(second);
 
         assert!(first_blocks.iter().any(|a| {
             second_blocks.iter().any(|b| {
@@ -416,7 +392,7 @@ const second = {
 };
 "#;
 
-        assert!(collect_code_blocks(source).is_empty());
+        assert!(code_blocks(source).is_empty());
     }
 
     #[test]

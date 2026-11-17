@@ -235,6 +235,10 @@ fn bundle_single_html(rendered_html: String) -> String {
 
     let inline_style = format!("<style>{STYLES}</style>");
     let mut bundled = rendered_html
+        .replace(r#"<link rel="stylesheet" href="./layout.css" />"#, "")
+        .replace(r#"<link rel="stylesheet" href="layout.css" />"#, "")
+        .replace(r#"<link rel="stylesheet" href="./layout.css">"#, "")
+        .replace(r#"<link rel="stylesheet" href="layout.css">"#, "")
         .replace(r#"<link rel="stylesheet" href="./style.css" />"#, &inline_style)
         .replace(r#"<link rel="stylesheet" href="style.css" />"#, &inline_style)
         .replace(r#"<link rel="stylesheet" href="./style.css">"#, &inline_style)
@@ -688,4 +692,44 @@ fn escape_html(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bundled_html_has_no_external_resources() {
+        let template = r#"<!doctype html><html><head>
+    <link rel="stylesheet" href="layout.css" />
+    <link rel="stylesheet" href="style.css" />
+</head><body>
+    <img src="./assets/logo.svg" alt="logo" />
+    <script src="./report.js"></script>
+</body></html>"#;
+
+        let bundled = bundle_single_html(template.to_string());
+
+        assert!(
+            !bundled.contains("layout.css"),
+            "el HTML final no debe referenciar layout.css"
+        );
+        assert!(
+            !bundled.contains(r#"href="style.css""#),
+            "el HTML final no debe referenciar style.css"
+        );
+        assert!(
+            !bundled.contains(r#"src="./report.js""#),
+            "el HTML final no debe referenciar report.js"
+        );
+        assert!(
+            !bundled.contains("./assets/logo.svg"),
+            "los SVG deben quedar embebidos como data URI"
+        );
+        assert!(bundled.contains("<style>"), "el CSS debe quedar inline");
+        assert!(
+            bundled.contains("data:image/svg+xml;base64,"),
+            "los SVG deben quedar embebidos"
+        );
+    }
 }

@@ -5,7 +5,6 @@ use crate::gemini::gemini::{GeminiTransport, SecretStore, SingleRequestClient};
 use crate::gemini::prompt::{PROMPT_VERSION, build_analysis_prompt};
 use crate::gemini::response::parse_and_validate_response;
 use crate::model::{AiAnalysis, AiExecutionState, AiStatusSummary, Finding, ProjectAnalysis};
-use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -21,7 +20,6 @@ pub fn run_semantic_analysis<S, T>(
     static_findings: &[Finding],
     secret_store: &S,
     transport: &T,
-    cache_dir_override: Option<PathBuf>,
 ) -> SemanticAnalysisOutcome
 where
     S: SecretStore + ?Sized,
@@ -33,7 +31,6 @@ where
         static_findings,
         secret_store,
         transport,
-        cache_dir_override,
         |_| {},
     )
 }
@@ -44,7 +41,6 @@ pub fn run_semantic_analysis_with_progress<S, T, F>(
     static_findings: &[Finding],
     secret_store: &S,
     transport: &T,
-    cache_dir_override: Option<PathBuf>,
     mut on_stage: F,
 ) -> SemanticAnalysisOutcome
 where
@@ -117,11 +113,8 @@ where
         }
     };
 
-    on_stage("Consultando caché semántica local...");
-    let cache_dir = cache_dir_override
-        .or_else(|| AppConfig::default_cache_dir().ok())
-        .unwrap_or_else(|| PathBuf::from(".debtlens-cache"));
-    let cache = AnalysisCache::new(cache_dir, config.ai.cache.enabled);
+    on_stage("Consultando caché semántica en memoria...");
+    let cache = AnalysisCache::new(config.ai.cache.enabled);
     let cache_key = AnalysisCache::compute_key(&context, &model, PROMPT_VERSION, &config.ai.limits);
 
     if let Ok(Some(cached_analysis)) = cache.get(&cache_key) {
@@ -130,7 +123,7 @@ where
                 enabled: true,
                 state: AiExecutionState::Cached,
                 model: Some(model),
-                message: "Análisis semántico recuperado desde la caché local.".to_string(),
+                message: "Análisis semántico recuperado desde la caché en memoria.".to_string(),
             },
             analysis: Some(cached_analysis),
         };

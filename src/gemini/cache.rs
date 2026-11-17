@@ -1,20 +1,35 @@
 use crate::config::AiLimitsConfig;
 use crate::gemini::context::ProjectContext;
 use crate::model::AiAnalysis;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
-#[derive(Debug, Clone)]
+/// Número máximo de entradas retenidas en RAM (RNF04: sin crecimiento ilimitado).
+const MAX_ENTRIES: usize = 32;
+
+/// Almacén de proceso en memoria volátil.
+///
+/// La caché **nunca** toca el sistema de archivos: cumple el principio
+/// stateless/zero-persistence (RNF04) y se destruye al terminar el proceso.
+fn store() -> &'static Mutex<HashMap<String, AiAnalysis>> {
+    static STORE: OnceLock<Mutex<HashMap<String, AiAnalysis>>> = OnceLock::new();
+    STORE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn lock_store() -> MutexGuard<'static, HashMap<String, AiAnalysis>> {
+    store().lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct AnalysisCache {
-    dir: PathBuf,
     enabled: bool,
 }
 
 impl AnalysisCache {
-    pub fn new(dir: PathBuf, enabled: bool) -> Self {
-        Self { dir, enabled }
+    pub fn new(enabled: bool) -> Self {
+        Self { enabled }
     }
 
     pub fn compute_key(
@@ -67,24 +82,13 @@ impl AnalysisCache {
             return Ok(None);
         }
 
-        let entry_path = self.entry_path(key);
-        if !entry_path.is_file() {
-            return Ok(None);
-        }
-
-        let raw = fs::read_to_string(&entry_path)
-            .with_context(|| format!("No se pudo leer la caché en {}", entry_path.display()))?;
-
-        let mut analysis: AiAnalysis = match serde_json::from_str(&raw) {
-            Ok(data) => data,
-            Err(_) => {
-                let _ = fs::remove_file(&entry_path);
-                return Ok(None);
-            }
+        let mut cached = match lock_store().get(key).cloned() {
+            Some(analysis) => analysis,
+            None => return Ok(None),
         };
 
-        analysis.from_cache = true;
-        Ok(Some(analysis))
+        cached.from_cache = true;
+        Ok(Some(cached))
     }
 
     pub fn put(&self, key: &str, analysis: &AiAnalysis) -> Result<()> {
@@ -92,28 +96,36 @@ impl AnalysisCache {
             return Ok(());
         }
 
-        fs::create_dir_all(&self.dir).with_context(|| {
-            format!(
-                "No se pudo crear el directorio de caché {}",
-                self.dir.display()
-            )
-        })?;
+        let mut guard = lock_store();
+
+        if guard.len() >= MAX_ENTRIES
+            && !guard.contains_key(key)
+            && let Some(evicted) = guard.keys().next().cloned()
+        {
+            guard.remove(&evicted);
+        }
 
         let mut storable = analysis.clone();
         storable.from_cache = false;
-
-        let serialized = serde_json::to_string_pretty(&storable)
-            .context("No se pudo serializar la entrada de caché")?;
-
-        let entry_path = self.entry_path(key);
-        fs::write(&entry_path, serialized)
-            .with_context(|| format!("No se pudo escribir la caché en {}", entry_path.display()))?;
+        guard.insert(key.to_string(), storable);
 
         Ok(())
     }
 
-    fn entry_path(&self, key: &str) -> PathBuf {
-        self.dir.join(format!("{key}.json"))
+    /// Vacía el almacén en memoria. Solo se usa en pruebas.
+    #[cfg(test)]
+    pub fn reset() {
+        lock_store().clear();
+    }
+
+    /// Serializa las pruebas que comparten el almacén global de proceso.
+    #[cfg(test)]
+    pub fn test_guard() -> MutexGuard<'static, ()> {
+        static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        TEST_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
 

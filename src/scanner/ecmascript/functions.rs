@@ -28,17 +28,30 @@ pub(super) fn collect_functions(node: Node<'_>, source: &str, functions: &mut Ve
     }
 }
 
+/// Nodos que representan una función medible de forma independiente.
+///
+/// Los generadores se incluyen explícitamente: de lo contrario su métrica se
+/// atribuiría a la función contenedora y contaminaría su complejidad.
 pub(super) fn is_function(node: Node<'_>) -> bool {
     matches!(
         node.kind(),
-        "function_declaration" | "function_expression" | "arrow_function" | "method_definition"
+        "function_declaration"
+            | "function_expression"
+            | "arrow_function"
+            | "method_definition"
+            | "generator_function"
+            | "generator_function_declaration"
     )
 }
 
 fn find_function_name(node: Node<'_>, source: &str) -> Option<String> {
     if !matches!(
         node.kind(),
-        "function_declaration" | "function_expression" | "method_definition"
+        "function_declaration"
+            | "function_expression"
+            | "method_definition"
+            | "generator_function"
+            | "generator_function_declaration"
     ) {
         return None;
     }

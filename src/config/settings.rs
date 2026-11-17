@@ -110,12 +110,6 @@ impl AppConfig {
         Ok(base.join("debtlens").join("config.toml"))
     }
 
-    pub fn default_cache_dir() -> Result<PathBuf> {
-        let base = dirs::cache_dir()
-            .context("No se pudo determinar el directorio de caché del usuario")?;
-        Ok(base.join("debtlens"))
-    }
-
     pub fn load() -> Result<Self> {
         let path = Self::default_config_path()?;
         Self::load_from(&path)

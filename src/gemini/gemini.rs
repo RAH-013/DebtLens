@@ -49,19 +49,13 @@ impl ApiKey {
         &self.0
     }
 
+    /// Devuelve una representación segura de la credencial.
+    ///
+    /// Nunca revela caracteres de la clave: solo su longitud, para que el
+    /// operador pueda distinguir una clave configurada de otra sin exponer
+    /// material sensible en la terminal (RNF03).
     pub fn masked(&self) -> String {
-        let chars: Vec<char> = self.0.chars().collect();
-        if chars.len() <= 6 {
-            "••••••••".to_string()
-        } else if chars.len() <= 12 {
-            let prefix: String = chars.iter().take(2).collect();
-            let suffix: String = chars.iter().skip(chars.len() - 2).collect();
-            format!("{prefix}••••••{suffix}")
-        } else {
-            let prefix: String = chars.iter().take(6).collect();
-            let suffix: String = chars.iter().skip(chars.len() - 4).collect();
-            format!("{prefix}••••••••{suffix}")
-        }
+        format!("•••••••• ({} caracteres)", self.0.chars().count())
     }
 }
 

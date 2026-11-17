@@ -30,28 +30,41 @@ pub struct CodeBlockMetric {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileAnalysis {
     pub path: String,
+    #[serde(default)]
     pub language: String,
+    #[serde(default)]
     pub lines: usize,
+    #[serde(default)]
     pub bytes: u64,
+    #[serde(default)]
     pub syntax_errors: Vec<usize>,
+    #[serde(default)]
     pub functions: Vec<FunctionMetric>,
+    #[serde(default)]
     pub todo_markers: Vec<TodoMarker>,
+    #[serde(default)]
     pub code_blocks: Vec<CodeBlockMetric>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectAnalysis {
     pub root: String,
+    #[serde(default)]
     pub files_scanned: usize,
+    #[serde(default)]
     pub total_lines: usize,
+    #[serde(default)]
     pub total_bytes: u64,
+    #[serde(default)]
     pub total_functions: usize,
+    #[serde(default)]
     pub files: Vec<FileAnalysis>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Severity {
+    Critical,
     Info,
     Low,
     Medium,
@@ -61,6 +74,7 @@ pub enum Severity {
 impl Severity {
     pub fn debt_weight(self) -> f64 {
         match self {
+            Self::Critical => 20.0,
             Self::High => 10.0,
             Self::Medium => 5.0,
             Self::Low => 2.0,

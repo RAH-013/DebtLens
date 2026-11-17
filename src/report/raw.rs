@@ -5,6 +5,9 @@ use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Radio de contexto que acompaña a cada hallazgo en el reporte (RNF05).
+pub const CONTEXT_RADIUS: usize = 4;
+
 pub fn render(report: &AnalysisReport, verbose: bool) -> Result<String> {
     let mut value =
         serde_json::to_value(report).context("No se pudo convertir el análisis a JSON")?;
@@ -133,9 +136,11 @@ fn source_context(root: &str, file: &str, line: usize, length: usize, exact_bloc
         let start = line - 1;
         (start, start.saturating_add(length).min(lines.len()))
     } else {
+        // RNF05: contexto simétrico de ±4 líneas alrededor del hallazgo.
+        let target = line - 1;
         (
-            line.saturating_sub(4),
-            line.saturating_add(3).min(lines.len()),
+            target.saturating_sub(CONTEXT_RADIUS),
+            target.saturating_add(CONTEXT_RADIUS + 1).min(lines.len()),
         )
     };
 
@@ -150,4 +155,138 @@ fn source_context(root: &str, file: &str, line: usize, length: usize, exact_bloc
         .collect();
 
     serde_json::json!(context)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{
+        AiStatusSummary, AnalysisReport, DebtLevel, FileAnalysis, ProjectAnalysis,
+        TechnicalDebtIndex,
+    };
+
+    fn temp_root(tag: &str) -> std::path::PathBuf {
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or_default();
+        let dir = std::env::temp_dir().join(format!("debtlens-test-{tag}-{stamp}"));
+        fs::create_dir_all(&dir).expect("no se pudo crear el directorio de prueba");
+        dir
+    }
+
+    fn sample_report(root: &str) -> AnalysisReport {
+        AnalysisReport {
+            analysis: ProjectAnalysis {
+                root: root.to_string(),
+                files_scanned: 1,
+                total_lines: 20,
+                total_bytes: 200,
+                total_functions: 1,
+                files: vec![FileAnalysis {
+                    path: "src/app.js".to_string(),
+                    language: "javascript".to_string(),
+                    lines: 20,
+                    bytes: 200,
+                    syntax_errors: Vec::new(),
+                    functions: Vec::new(),
+                    todo_markers: Vec::new(),
+                    code_blocks: Vec::new(),
+                }],
+            },
+            findings: Vec::new(),
+            debt_index: TechnicalDebtIndex {
+                score: 12.5,
+                level: DebtLevel::Low,
+                static_points: 1.0,
+                semantic_points: 0.0,
+                static_findings_count: 1,
+                semantic_findings_count: 0,
+                deduplicated_semantic_count: 0,
+            },
+            ai_status: AiStatusSummary::disabled(),
+            ai_analysis: None,
+        }
+    }
+
+    #[test]
+    fn source_context_uses_symmetric_four_line_window() {
+        let dir = temp_root("ctx");
+        let source: String = (1..=20).map(|n| format!("linea {n}\n")).collect();
+        fs::write(dir.join("app.js"), source).expect("no se pudo escribir el archivo de prueba");
+
+        let ctx = source_context(dir.to_str().expect("ruta válida"), "app.js", 10, 7, false);
+        let entries = ctx.as_array().expect("contexto debe ser un arreglo");
+
+        assert_eq!(entries.first().expect("primera entrada")["line"], 6);
+        assert_eq!(entries.last().expect("última entrada")["line"], 14);
+        assert_eq!(entries.len(), 2 * CONTEXT_RADIUS + 1);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn source_context_is_clamped_to_file_bounds() {
+        let dir = temp_root("clamp");
+        let source: String = (1..=20).map(|n| format!("linea {n}\n")).collect();
+        fs::write(dir.join("app.js"), source).expect("no se pudo escribir el archivo de prueba");
+
+        let ctx = source_context(dir.to_str().expect("ruta válida"), "app.js", 1, 7, false);
+        let entries = ctx.as_array().expect("contexto debe ser un arreglo");
+
+        assert_eq!(entries.first().expect("primera entrada")["line"], 1);
+        assert_eq!(entries.last().expect("última entrada")["line"], 5);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn compact_report_remains_deserializable() {
+        let report = sample_report("C:/proyecto");
+
+        let json = render(&report, false).expect("el reporte compacto debe generarse");
+        let parsed: AnalysisReport =
+            serde_json::from_str(&json).expect("el reporte compacto debe seguir siendo válido");
+
+        assert_eq!(parsed.analysis.files_scanned, 1);
+        assert_eq!(parsed.analysis.files[0].path, "src/app.js");
+        assert!(parsed.analysis.files[0].functions.is_empty());
+    }
+
+    #[test]
+    fn verbose_report_keeps_file_details() {
+        let report = sample_report("C:/proyecto");
+
+        let json = render(&report, true).expect("el reporte completo debe generarse");
+        let parsed: AnalysisReport =
+            serde_json::from_str(&json).expect("el reporte completo debe ser válido");
+
+        assert_eq!(parsed.analysis.files[0].language, "javascript");
+        assert_eq!(parsed.analysis.total_lines, 20);
+    }
+
+    #[test]
+    fn canonical_report_keeps_top_level_contract() {
+        let report = sample_report("C:/proyecto");
+        let json = render(&report, false).expect("el reporte debe generarse");
+        let value: Value = serde_json::from_str(&json).expect("JSON válido");
+
+        for key in ["analysis", "findings", "debt_index", "ai_status", "generated_at"] {
+            assert!(value.get(key).is_some(), "falta el campo `{key}`");
+        }
+        for key in [
+            "score",
+            "level",
+            "static_points",
+            "semantic_points",
+            "static_findings_count",
+            "semantic_findings_count",
+            "deduplicated_semantic_count",
+        ] {
+            assert!(
+                value["debt_index"].get(key).is_some(),
+                "falta `debt_index.{key}`"
+            );
+        }
+    }
 }
