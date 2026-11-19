@@ -19,6 +19,9 @@ impl Rule for SyntaxRule {
             .flat_map(|file| {
                 file.syntax_errors.iter().map(|line| Finding {
                     id: None,
+                    impact_factor: None,
+                    depth: None,
+                    roi_technical: None,
                     rule_id: self.id().to_string(),
                     title: self.name().to_string(),
                     description: "Se detectó un error sintáctico en esta línea.".to_string(),

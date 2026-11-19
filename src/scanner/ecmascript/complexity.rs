@@ -6,11 +6,17 @@ use super::functions::is_function;
 const LOGICAL_OPERATORS: [&str; 3] = ["&&", "||", "??"];
 
 fn is_decision(node: Node<'_>) -> bool {
-    match node.kind() {
-        "if_statement" | "for_statement" | "for_in_statement" | "while_statement"
-        | "do_statement" | "catch_clause" | "ternary_expression" | "switch_case" => true,
-        _ => false,
-    }
+    matches!(
+        node.kind(),
+        "if_statement"
+            | "for_statement"
+            | "for_in_statement"
+            | "while_statement"
+            | "do_statement"
+            | "catch_clause"
+            | "ternary_expression"
+            | "switch_case"
+    )
 }
 
 /// Un `if` que cuelga directamente de un `else_clause` es la continuación de una
@@ -22,8 +28,8 @@ fn is_else_if_continuation(node: Node<'_>) -> bool {
             .is_some_and(|parent| parent.kind() == "else_clause")
 }
 
-pub(super) fn calculate_complexity(node: Node<'_>, source: &str) -> usize {
-    fn visit(node: Node<'_>, source: &str) -> usize {
+pub(super) fn calculate_complexity(node: Node<'_>) -> usize {
+    fn visit(node: Node<'_>) -> usize {
         if is_function(node) {
             return 0;
         }
@@ -43,7 +49,7 @@ pub(super) fn calculate_complexity(node: Node<'_>, source: &str) -> usize {
         let mut cursor = node.walk();
 
         for child in node.children(&mut cursor) {
-            complexity += visit(child, source);
+            complexity += visit(child);
         }
 
         complexity
@@ -53,7 +59,7 @@ pub(super) fn calculate_complexity(node: Node<'_>, source: &str) -> usize {
     let mut cursor = node.walk();
 
     for child in node.children(&mut cursor) {
-        complexity += visit(child, source);
+        complexity += visit(child);
     }
 
     complexity

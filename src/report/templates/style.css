@@ -58,6 +58,9 @@
   --high: #ef4444;
   --high-bg: #fef2f2;
   --high-border: #fecaca;
+  --critical: #b91c1c;
+  --critical-bg: #fee2e2;
+  --critical-border: #fca5a5;
   --medium: #d97706;
   --medium-bg: #fffbeb;
   --medium-border: #fde68a;
@@ -131,6 +134,9 @@
     --high: #f87171;
     --high-bg: rgba(239, 68, 68, 0.12);
     --high-border: rgba(239, 68, 68, 0.3);
+    --critical: #ef4444;
+    --critical-bg: rgba(239, 68, 68, 0.16);
+    --critical-border: rgba(239, 68, 68, 0.4);
     --medium: #fbbf24;
     --medium-bg: rgba(245, 158, 11, 0.12);
     --medium-border: rgba(245, 158, 11, 0.3);
@@ -200,6 +206,9 @@ html[data-theme="dark"] {
   --high: #f87171;
   --high-bg: rgba(239, 68, 68, 0.12);
   --high-border: rgba(239, 68, 68, 0.3);
+  --critical: #ef4444;
+  --critical-bg: rgba(239, 68, 68, 0.16);
+  --critical-border: rgba(239, 68, 68, 0.4);
   --medium: #fbbf24;
   --medium-bg: rgba(245, 158, 11, 0.12);
   --medium-border: rgba(245, 158, 11, 0.3);
@@ -269,6 +278,9 @@ html[data-theme="light"] {
   --high: #ef4444;
   --high-bg: #fef2f2;
   --high-border: #fecaca;
+  --critical: #b91c1c;
+  --critical-bg: #fee2e2;
+  --critical-border: #fca5a5;
   --medium: #d97706;
   --medium-bg: #fffbeb;
   --medium-border: #fde68a;
@@ -887,6 +899,10 @@ html[data-theme="dark"] #card-debt {
   animation: grow 800ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
+.bar-critical {
+  background: var(--critical);
+}
+
 .bar-high {
   background: var(--high);
 }
@@ -1124,6 +1140,12 @@ html[data-theme="dark"] #card-debt {
   border-radius: 50%;
   background: currentColor;
   content: "";
+}
+
+.severity.critical {
+  border-color: var(--critical-border);
+  background: var(--critical-bg);
+  color: var(--critical);
 }
 
 .severity.high {

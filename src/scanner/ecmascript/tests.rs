@@ -245,3 +245,38 @@ fn maps_extensions_to_languages() {
     assert_eq!(EcmaLanguage::from_extension("tsx"), Some(EcmaLanguage::Tsx));
     assert_eq!(EcmaLanguage::from_extension("json"), None);
 }
+
+#[test]
+fn cyclomatic_complexity_matches_thesis_formula_exactly() {
+    // E1.9 (regresión de v(G) exacta), según la ecuación del Capítulo IV:
+    //   v(G) = 1 + if + for + while + catch + ternary + casos(case) + &&/||/??
+    // Desglose de este fragmento:
+    //   if(1) + for-of(1) + while(1) + case(2) + ternario(1) + &&(1) + ??(1) = 8
+    //   => v(G) = 1 + 8 = 9
+    let file = analyze(
+        "function modelo(a, b, c) {
+            if (a && b) {
+                return 1;
+            }
+            for (const x of c) {
+                while (x) {
+                    break;
+                }
+            }
+            switch (a) {
+                case 1:
+                    break;
+                case 2:
+                    break;
+            }
+            const t = a ? 1 : 2;
+            return a ?? b;
+        }",
+    );
+
+    assert_eq!(
+        function(&file, "modelo").complexity,
+        Some(9),
+        "v(G) debe seguir exactamente la fórmula del Capítulo IV"
+    );
+}

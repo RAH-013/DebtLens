@@ -183,6 +183,7 @@ mod tests {
                 total_lines: 20,
                 total_bytes: 200,
                 total_functions: 1,
+                telemetry: None,
                 files: vec![FileAnalysis {
                     path: "src/app.js".to_string(),
                     language: "javascript".to_string(),
@@ -288,5 +289,81 @@ mod tests {
                 "falta `debt_index.{key}`"
             );
         }
+    }
+
+    #[test]
+    fn telemetry_is_published_in_canonical_json() {
+        use crate::model::Telemetry;
+
+        let mut report = sample_report("proyecto");
+        report.analysis.telemetry = Some(Telemetry {
+            walk_ms: 1.5,
+            ast_ms: 2.5,
+            clones_ms: 0.5,
+            rules_ms: 0.25,
+        });
+
+        let json = render(&report, false).expect("el reporte debe generarse");
+        let value: Value = serde_json::from_str(&json).expect("JSON válido");
+        let telemetry = value["analysis"]["telemetry"]
+            .as_object()
+            .expect("`analysis.telemetry` debe publicarse en el JSON (E1.2)");
+
+        for key in ["walk_ms", "ast_ms", "clones_ms", "rules_ms"] {
+            let time = telemetry
+                .get(key)
+                .and_then(Value::as_f64)
+                .unwrap_or_else(|| panic!("falta `telemetry.{key}` numérico"));
+            assert!(
+                time.is_finite() && time >= 0.0,
+                "`telemetry.{key}` debe ser un tiempo válido en milisegundos"
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_json_without_phase_one_fields_deserializes() {
+        use crate::model::{Finding, Severity, Telemetry};
+
+        let mut report = sample_report("proyecto");
+        report.analysis.telemetry = Some(Telemetry::default());
+        report.findings = vec![Finding {
+            id: Some("F000000000001".to_string()),
+            rule_id: "FUNC001".to_string(),
+            title: "Longitud excesiva de función".to_string(),
+            description: "Función de 60 líneas.".to_string(),
+            file: "src/app.js".to_string(),
+            line: 3,
+            locations: Vec::new(),
+            severity: Severity::Medium,
+            recommendation: "Divide la función.".to_string(),
+            impact_factor: Some(1.0),
+            depth: Some(2),
+            roi_technical: Some(0.5),
+        }];
+
+        let mut value = serde_json::to_value(&report).expect("serialización intermedia");
+
+        // Simula un JSON generado por una versión anterior a la Fase 1:
+        // sin `telemetry` y sin los campos aditivos de `Finding` (C4).
+        value["analysis"]
+            .as_object_mut()
+            .expect("`analysis` debe ser un objeto")
+            .remove("telemetry");
+        for key in ["impact_factor", "depth", "roi_technical"] {
+            value["findings"][0]
+                .as_object_mut()
+                .expect("`findings[0]` debe ser un objeto")
+                .remove(key);
+        }
+
+        let parsed: AnalysisReport = serde_json::from_value(value)
+            .expect("C4: un JSON antiguo sin los campos nuevos debe deserializar");
+
+        assert!(parsed.analysis.telemetry.is_none());
+        let finding = &parsed.findings[0];
+        assert!(finding.impact_factor.is_none());
+        assert!(finding.depth.is_none());
+        assert!(finding.roi_technical.is_none());
     }
 }

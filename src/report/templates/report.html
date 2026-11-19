@@ -270,8 +270,9 @@
           <div
             class="bar"
             role="img"
-            aria-label="Alta: {{HIGH}}, media: {{MEDIUM}}, baja: {{LOW}}, informativa: {{INFO}}"
+            aria-label="Crítica: {{CRITICAL}}, alta: {{HIGH}}, media: {{MEDIUM}}, baja: {{LOW}}, informativa: {{INFO}}"
           >
+            <span class="bar-critical" style="width: {{CRITICAL_WIDTH}}%"></span>
             <span class="bar-high" style="width: {{HIGH_WIDTH}}%"></span>
             <span class="bar-medium" style="width: {{MEDIUM_WIDTH}}%"></span>
             <span class="bar-low" style="width: {{LOW_WIDTH}}%"></span>
@@ -281,8 +282,16 @@
           <div class="severity-legend">
             <div class="legend-item">
               <span class="legend-label">
+                <span class="legend-dot" style="background: var(--critical)"></span>
+                Crítica
+              </span>
+              <strong class="legend-value">{{CRITICAL}}</strong>
+            </div>
+
+            <div class="legend-item">
+              <span class="legend-label">
                 <span class="legend-dot" style="background: var(--high)"></span>
-                Crítica / Alta
+                Alta
               </span>
               <strong class="legend-value">{{HIGH}}</strong>
             </div>
@@ -391,7 +400,8 @@
             <label for="severity-filter">Severidad / Prioridad</label>
             <select class="control" id="severity-filter">
               <option value="all">Todas</option>
-              <option value="high">Crítica / Alta</option>
+              <option value="critical">Crítica</option>
+              <option value="high">Alta</option>
               <option value="medium">Media</option>
               <option value="low">Baja</option>
               <option value="info">Informativa</option>

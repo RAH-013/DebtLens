@@ -30,6 +30,9 @@ impl Rule for FunctionComplexityRule {
 
                     (complexity > self.max_complexity).then(|| Finding {
                         id: None,
+                        impact_factor: None,
+                        depth: None,
+                        roi_technical: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(
@@ -47,5 +50,33 @@ impl Rule for FunctionComplexityRule {
                 })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FunctionComplexityRule;
+    use crate::rules::rule::Rule;
+    use crate::rules::test_fixtures::{function, project};
+
+    #[test]
+    fn complexity_of_ten_does_not_trigger() {
+        let analysis = project(vec![function("limite", 1, 20, Some(2), Some(10), 1)]);
+
+        assert!(
+            FunctionComplexityRule::default()
+                .evaluate(&analysis)
+                .is_empty(),
+            "FUNC002 debe disparar solo con v(G) > 10"
+        );
+    }
+
+    #[test]
+    fn complexity_of_eleven_triggers() {
+        let analysis = project(vec![function("excede", 1, 20, Some(2), Some(11), 1)]);
+        let findings = FunctionComplexityRule::default().evaluate(&analysis);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "FUNC002");
     }
 }

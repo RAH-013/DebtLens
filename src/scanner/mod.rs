@@ -1,11 +1,13 @@
 pub mod ecmascript;
 
 use anyhow::{Context, Result};
-use ignore::{DirEntry, WalkBuilder};
+use ignore::{DirEntry, WalkBuilder, WalkState};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::time::Instant;
 use tree_sitter::Node;
 
-use crate::model::{CodeBlockMetric, FileAnalysis, ProjectAnalysis, TodoMarker};
+use crate::model::{CodeBlockMetric, FileAnalysis, ProjectAnalysis, Telemetry, TodoMarker};
 use ecmascript::EcmaLanguage;
 
 const MIN_DUPLICATE_STATEMENTS: usize = 5;
@@ -42,7 +44,12 @@ fn language_for(path: &Path) -> Option<EcmaLanguage> {
         .and_then(EcmaLanguage::from_extension)
 }
 
-fn analyze_file(root: &Path, path: &Path, language: EcmaLanguage) -> Result<FileAnalysis> {
+/// Analiza un archivo devolviendo sus métricas junto con los tiempos de las
+/// fases `ast` (lectura + parsing + métricas + marcadores) y `clones`
+/// (detección FNV-1a), en milisegundos.
+fn analyze_file(root: &Path, path: &Path, language: EcmaLanguage) -> Result<(FileAnalysis, f64, f64)> {
+    let ast_started = Instant::now();
+
     let source = std::fs::read_to_string(path)
         .with_context(|| format!("No se pudo leer {}", path.display()))?;
 
@@ -61,9 +68,14 @@ fn analyze_file(root: &Path, path: &Path, language: EcmaLanguage) -> Result<File
 
     let root_node = tree.root_node();
     file.todo_markers = collect_comment_data(root_node, &source);
-    file.code_blocks = collect_code_blocks(root_node, &source);
 
-    Ok(file)
+    let ast_ms = ast_started.elapsed().as_secs_f64() * 1000.0;
+
+    let clones_started = Instant::now();
+    file.code_blocks = collect_code_blocks(root_node, &source);
+    let clones_ms = clones_started.elapsed().as_secs_f64() * 1000.0;
+
+    Ok((file, ast_ms, clones_ms))
 }
 
 fn contains_marker(text: &str, marker: &str) -> bool {
@@ -257,40 +269,104 @@ pub fn scan_project(path: &Path) -> Result<ProjectAnalysis> {
 
     anyhow::ensure!(root.is_dir(), "La ruta debe ser un directorio");
 
+    // Fase 1 (T_walk): recorrido multihilo del árbol de directorios.
+    // Solo se colectan las rutas candidatas; el análisis sucede en la fase 2.
+    let walk_started = Instant::now();
+    let candidates: Vec<PathBuf> = {
+        let collected: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
+        WalkBuilder::new(&root)
+            .hidden(false)
+            .filter_entry(should_visit)
+            .build_parallel()
+            .run(|| {
+                Box::new(|entry| {
+                    let entry = match entry {
+                        Ok(entry) => entry,
+                        Err(error) => {
+                            eprintln!("Advertencia de recorrido: {error}");
+                            return WalkState::Continue;
+                        }
+                    };
+
+                    let file_path = entry.path();
+
+                    if file_path.is_file() && language_for(file_path).is_some() {
+                        collected
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner())
+                            .push(file_path.to_path_buf());
+                    }
+
+                    WalkState::Continue
+                })
+            });
+
+        collected
+            .into_inner()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    };
+    let walk_ms = walk_started.elapsed().as_secs_f64() * 1000.0;
+
+    // Fase 2 (T_AST / T_clones): análisis en paralelo con hilos estándar
+    // particionando las rutas colectadas. El orden de resultados no importa:
+    // al final se ordena por ruta, garantizando determinismo total.
+    let threads = std::thread::available_parallelism()
+        .map(|count| count.get())
+        .unwrap_or(1)
+        .max(1);
+    let chunk_size = candidates.len().div_ceil(threads).max(1);
+    // Referencia `Copy` para que los cierres `move` no consuman `root`.
+    let root_ref: &Path = &root;
+
+    let partitions: Vec<(Vec<FileAnalysis>, f64, f64)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = candidates
+            .chunks(chunk_size)
+            .map(|chunk| {
+                scope.spawn(move || {
+                    let mut local_files = Vec::new();
+                    let mut local_ast_ms = 0.0f64;
+                    let mut local_clones_ms = 0.0f64;
+
+                    for file_path in chunk {
+                        let Some(language) = language_for(file_path) else {
+                            continue;
+                        };
+
+                        match analyze_file(root_ref, file_path, language) {
+                            Ok((file, ast_ms, clones_ms)) => {
+                                local_files.push(file);
+                                local_ast_ms += ast_ms;
+                                local_clones_ms += clones_ms;
+                            }
+                            Err(error) => {
+                                eprintln!(
+                                    "Advertencia: no se pudo analizar {}: {error:#}",
+                                    file_path.display()
+                                );
+                            }
+                        }
+                    }
+
+                    (local_files, local_ast_ms, local_clones_ms)
+                })
+            })
+            .collect();
+
+        handles
+            .into_iter()
+            .map(|handle| handle.join().expect("un hilo de análisis no debe fallar"))
+            .collect()
+    });
+
     let mut files = Vec::new();
+    let mut ast_ms = 0.0f64;
+    let mut clones_ms = 0.0f64;
 
-    for entry in WalkBuilder::new(&root)
-        .hidden(false)
-        .filter_entry(should_visit)
-        .build()
-    {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                eprintln!("Advertencia de recorrido: {error}");
-                continue;
-            }
-        };
-
-        let file_path: PathBuf = entry.path().to_path_buf();
-
-        if !file_path.is_file() {
-            continue;
-        }
-
-        let Some(language) = language_for(&file_path) else {
-            continue;
-        };
-
-        match analyze_file(&root, &file_path, language) {
-            Ok(file) => files.push(file),
-            Err(error) => {
-                eprintln!(
-                    "Advertencia: no se pudo analizar {}: {error:#}",
-                    file_path.display()
-                );
-            }
-        }
+    for (mut partition_files, partition_ast, partition_clones) in partitions {
+        files.append(&mut partition_files);
+        ast_ms += partition_ast;
+        clones_ms += partition_clones;
     }
 
     files.sort_by(|a, b| a.path.cmp(&b.path));
@@ -302,6 +378,13 @@ pub fn scan_project(path: &Path) -> Result<ProjectAnalysis> {
         total_bytes: files.iter().map(|file| file.bytes).sum(),
         total_functions: files.iter().map(|file| file.functions.len()).sum(),
         files,
+        // `rules_ms` lo completa la capa de aplicación al evaluar las reglas.
+        telemetry: Some(Telemetry {
+            walk_ms,
+            ast_ms,
+            clones_ms,
+            rules_ms: 0.0,
+        }),
     })
 }
 
@@ -433,5 +516,52 @@ const other = 'FIXME: tampoco';
     fn ignores_markers_inside_larger_words() {
         let source = "// NOTODO and FIXMEING are not markers";
         assert!(collect_todo_markers(source).is_empty());
+    }
+
+    #[test]
+    fn parallel_scan_is_deterministic_and_reports_telemetry() {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or_default();
+        let dir = std::env::temp_dir().join(format!(
+            "debtlens-scan-{}-{stamp}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("no se pudo crear el directorio temporal");
+        std::fs::write(dir.join("a.js"), "function a() { return 1; }\n").unwrap();
+        std::fs::write(dir.join("b.ts"), "export function b(x: number) { return x; }\n").unwrap();
+        std::fs::write(dir.join("c.tsx"), "export const C = () => <div />;\n").unwrap();
+        std::fs::write(dir.join("notas.txt"), "no es código\n").unwrap();
+
+        let first = super::scan_project(&dir).expect("primer escaneo");
+        let second = super::scan_project(&dir).expect("segundo escaneo");
+
+        let paths: Vec<&str> = first.files.iter().map(|file| file.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            vec!["a.js", "b.ts", "c.tsx"],
+            "solo JS/TS, ordenados por ruta"
+        );
+        assert_eq!(
+            paths,
+            second
+                .files
+                .iter()
+                .map(|file| file.path.as_str())
+                .collect::<Vec<_>>(),
+            "el escaneo paralelo debe ser determinista entre corridas"
+        );
+
+        let telemetry = first.telemetry.expect("telemetría de escaneo (E1.2)");
+        assert!(telemetry.walk_ms.is_finite() && telemetry.walk_ms >= 0.0);
+        assert!(telemetry.ast_ms.is_finite() && telemetry.ast_ms >= 0.0);
+        assert!(telemetry.clones_ms.is_finite() && telemetry.clones_ms >= 0.0);
+        assert_eq!(
+            telemetry.rules_ms, 0.0,
+            "`rules_ms` lo completa la capa de aplicación"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

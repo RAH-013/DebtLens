@@ -17,6 +17,7 @@
 *.swp
 *.swo
 *~
+*.md
 
 # Operating system
 .DS_Store

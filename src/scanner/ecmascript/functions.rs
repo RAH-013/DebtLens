@@ -16,7 +16,7 @@ pub(super) fn collect_functions(node: Node<'_>, source: &str, functions: &mut Ve
             end_line,
             lines: end_line - start_line + 1,
             parameters: find_parameters(node).map(count_parameters),
-            complexity: Some(calculate_complexity(node, source)),
+            complexity: Some(calculate_complexity(node)),
             nesting_depth: calculate_nesting(node),
         });
     }

@@ -86,6 +86,9 @@ impl Rule for DuplicateCodeRule {
 
             findings.push(Finding {
                 id: None,
+                impact_factor: None,
+                depth: None,
+                roi_technical: None,
                 rule_id: self.id().to_string(),
                 title: self.name().to_string(),
                 description: format!(
@@ -221,6 +224,7 @@ mod tests {
             total_lines: files.iter().map(|file| file.lines).sum(),
             total_bytes: files.iter().map(|file| file.bytes).sum(),
             total_functions: 0,
+            telemetry: None,
             files,
         }
     }

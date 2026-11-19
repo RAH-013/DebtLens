@@ -30,6 +30,9 @@ impl Rule for FunctionNestingRule {
                     .filter(|function| function.nesting_depth > self.max_depth)
                     .map(|function| Finding {
                 id: None,
+                        impact_factor: None,
+                        depth: None,
+                        roi_technical: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(
@@ -44,5 +47,33 @@ impl Rule for FunctionNestingRule {
                     })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FunctionNestingRule;
+    use crate::rules::rule::Rule;
+    use crate::rules::test_fixtures::{function, project};
+
+    #[test]
+    fn exactly_four_levels_does_not_trigger() {
+        let analysis = project(vec![function("limite", 1, 30, Some(2), Some(4), 4)]);
+
+        assert!(
+            FunctionNestingRule::default()
+                .evaluate(&analysis)
+                .is_empty(),
+            "FUNC004 debe disparar solo con anidamiento > 4"
+        );
+    }
+
+    #[test]
+    fn five_levels_trigger() {
+        let analysis = project(vec![function("excede", 1, 30, Some(2), Some(4), 5)]);
+        let findings = FunctionNestingRule::default().evaluate(&analysis);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "FUNC004");
     }
 }

@@ -109,9 +109,9 @@ pub fn render(raw_report: &str) -> Result<String> {
     let semantic_count = ai_new_findings.len();
     let total_finding_count = static_count + semantic_count;
 
-    let high = count_severity(findings, "high")
-        + count_priority(ai_new_findings, "critical")
-        + count_priority(ai_new_findings, "high");
+    let critical = count_severity(findings, "critical")
+        + count_priority(ai_new_findings, "critical");
+    let high = count_severity(findings, "high") + count_priority(ai_new_findings, "high");
     let medium = count_severity(findings, "medium") + count_priority(ai_new_findings, "medium");
     let low = count_severity(findings, "low") + count_priority(ai_new_findings, "low");
     let info = count_severity(findings, "info");
@@ -196,10 +196,15 @@ pub fn render(raw_report: &str) -> Result<String> {
         ("{{SEMANTIC_COUNT}}", semantic_count.to_string()),
         ("{{DENSITY}}", format!("{density:.2}")),
         ("{{SYNTAX_ERRORS}}", syntax_errors.to_string()),
+        ("{{CRITICAL}}", critical.to_string()),
         ("{{HIGH}}", high.to_string()),
         ("{{MEDIUM}}", medium.to_string()),
         ("{{LOW}}", low.to_string()),
         ("{{INFO}}", info.to_string()),
+        (
+            "{{CRITICAL_WIDTH}}",
+            format!("{:.2}", percentage(critical, total_finding_count)),
+        ),
         (
             "{{HIGH_WIDTH}}",
             format!("{:.2}", percentage(high, total_finding_count)),
@@ -398,6 +403,7 @@ fn render_bullet_group(title: &str, items: Option<&Vec<Value>>) -> String {
 fn render_static_finding(output: &mut String, finding: &Value, assessment: Option<&Value>) {
     let severity = string(finding, "severity");
     let label = match severity {
+        "critical" => "Crítica",
         "high" => "Alta",
         "medium" => "Media",
         "low" => "Baja",
@@ -541,7 +547,8 @@ fn render_semantic_finding(output: &mut String, finding: &Value) {
 
 fn normalize_severity_bucket(priority: &str) -> &'static str {
     match priority {
-        "critical" | "high" => "high",
+        "critical" => "critical",
+        "high" => "high",
         "medium" => "medium",
         "low" => "low",
         _ => "info",
@@ -730,6 +737,70 @@ mod tests {
         assert!(
             bundled.contains("data:image/svg+xml;base64,"),
             "los SVG deben quedar embebidos"
+        );
+    }
+
+    #[test]
+    fn severity_filter_and_legend_include_critical() {
+        let template = include_str!("templates/report.html");
+        assert!(
+            template.contains(r#"<option value="critical">Crítica</option>"#),
+            "el filtro de severidad debe incluir la opción Crítica (E1.11)"
+        );
+        assert!(
+            template.contains(r#"class="bar-critical""#),
+            "la barra de severidades debe incluir el segmento crítico"
+        );
+        assert!(
+            template.contains("Crítica"),
+            "la leyenda debe rotular el nivel Crítica"
+        );
+
+        let css = include_str!("templates/style.css");
+        assert!(
+            css.contains("--critical:"),
+            "falta la variable de color `--critical`"
+        );
+        assert!(
+            css.contains(".severity.critical"),
+            "falta el estilo `.severity.critical`"
+        );
+        assert!(
+            css.contains(".bar-critical"),
+            "falta el estilo `.bar-critical`"
+        );
+    }
+
+    #[test]
+    fn critical_severity_is_kept_in_its_own_bucket() {
+        assert_eq!(normalize_severity_bucket("critical"), "critical");
+        assert_eq!(normalize_severity_bucket("high"), "high");
+    }
+
+    #[test]
+    fn static_critical_finding_renders_critical_label() {
+        let finding = serde_json::json!({
+            "id": "F000000000abc",
+            "rule_id": "FUNC002",
+            "title": "Complejidad crítica",
+            "description": "Descripción",
+            "file": "src/app.js",
+            "line": 10,
+            "severity": "critical",
+            "recommendation": "Dividir",
+            "source_code": []
+        });
+
+        let mut output = String::new();
+        render_static_finding(&mut output, &finding, None);
+
+        assert!(
+            output.contains(r#"data-severity="critical""#),
+            "el hallazgo crítico debe conservar su propio bucket para el filtro"
+        );
+        assert!(
+            output.contains("Crítica"),
+            "el rótulo de un hallazgo crítico debe ser `Crítica`, no `Info`"
         );
     }
 }

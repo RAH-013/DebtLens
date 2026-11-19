@@ -126,6 +126,7 @@ fn sample_project(root: &std::path::Path) -> (ProjectAnalysis, Vec<Finding>) {
         total_lines: 8,
         total_bytes: 160,
         total_functions: 2,
+        telemetry: None,
         files: vec![
             FileAnalysis {
                 path: "src/app.js".to_string(),
@@ -176,6 +177,9 @@ fn sample_project(root: &std::path::Path) -> (ProjectAnalysis, Vec<Finding>) {
         locations: Vec::new(),
         severity: Severity::High,
         recommendation: "Divide la función".to_string(),
+        impact_factor: None,
+        depth: None,
+        roi_technical: None,
     }];
 
     (analysis, findings)
@@ -524,4 +528,24 @@ fn enforces_single_request_cache_hit_and_fallback_behavior() {
     );
     assert_eq!(out_fail.status.state, AiExecutionState::FailedFallback);
     assert!(out_fail.analysis.is_none());
+}
+
+#[test]
+fn api_key_masking_and_debug_never_reveal_key_material() {
+    const SECRET: &str = "AIzaSyFakeKeyForDebtLensAudit1234567890";
+    let key = ApiKey::new(SECRET).expect("una clave no vacía debe construirse sin error");
+
+    let masked = key.masked();
+    assert!(
+        !masked.contains(SECRET) && !masked.contains("AIza") && !masked.contains(&SECRET[..10]),
+        "masked() no debe revelar ningún fragmento de la clave (RNF03)"
+    );
+    assert!(
+        masked.contains(&SECRET.chars().count().to_string()),
+        "el indicador debe reflejar la longitud real de la clave"
+    );
+
+    let debug = format!("{key:?}");
+    assert_eq!(debug, "ApiKey([REDACTED])");
+    assert!(!debug.contains("AIza"), "Debug no debe filtrar material de la clave");
 }

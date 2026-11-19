@@ -19,6 +19,9 @@ impl Rule for TodoRule {
             .flat_map(|file| {
                 file.todo_markers.iter().map(|marker| Finding {
                 id: None,
+                    impact_factor: None,
+                    depth: None,
+                    roi_technical: None,
                     rule_id: self.id().to_string(),
                     title: format!("Marcador {}", marker.marker),
                     description: format!(

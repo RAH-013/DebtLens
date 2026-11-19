@@ -46,6 +46,24 @@ pub struct FileAnalysis {
     pub code_blocks: Vec<CodeBlockMetric>,
 }
 
+/// Telemetría experimental de los subprocesos del análisis (RNF01).
+///
+/// Todos los valores están en milisegundos (fracción incluida, de modo que
+/// proyectos pequeños no reporten 0). `walk_ms` y `rules_ms` son tiempo de
+/// pared; `ast_ms` y `clones_ms` son la suma acumulada por archivo, de modo
+/// que la suma de las cuatro fases aproxima el tiempo total del análisis.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
+pub struct Telemetry {
+    #[serde(default)]
+    pub walk_ms: f64,
+    #[serde(default)]
+    pub ast_ms: f64,
+    #[serde(default)]
+    pub clones_ms: f64,
+    #[serde(default)]
+    pub rules_ms: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectAnalysis {
     pub root: String,
@@ -59,6 +77,9 @@ pub struct ProjectAnalysis {
     pub total_functions: usize,
     #[serde(default)]
     pub files: Vec<FileAnalysis>,
+    /// Campo aditivo (C4): ausente en los JSON generados por versiones previas.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telemetry: Option<Telemetry>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -102,6 +123,15 @@ pub struct Finding {
     pub locations: Vec<FindingLocation>,
     pub severity: Severity,
     pub recommendation: String,
+    /// Multiplicador de impacto $M_i$ del hallazgo (C4: aditivo y opcional).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub impact_factor: Option<f64>,
+    /// Profundidad de contexto del hallazgo para $ROI_{\text{técnico}}$ (C4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub depth: Option<usize>,
+    /// Retorno de inversión técnico $ROI_{\text{técnico}}$ calculado en Fase 2 (C4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roi_technical: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

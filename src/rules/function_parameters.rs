@@ -30,6 +30,9 @@ impl Rule for FunctionParametersRule {
 
                     (parameters > self.max_parameters).then(|| Finding {
                         id: None,
+                        impact_factor: None,
+                        depth: None,
+                        roi_technical: None,
                         rule_id: self.id().to_string(),
                         title: self.name().to_string(),
                         description: format!(
@@ -46,5 +49,33 @@ impl Rule for FunctionParametersRule {
                 })
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FunctionParametersRule;
+    use crate::rules::rule::Rule;
+    use crate::rules::test_fixtures::{function, project};
+
+    #[test]
+    fn exactly_five_parameters_does_not_trigger() {
+        let analysis = project(vec![function("limite", 1, 10, Some(5), Some(2), 0)]);
+
+        assert!(
+            FunctionParametersRule::default()
+                .evaluate(&analysis)
+                .is_empty(),
+            "FUNC003 debe disparar solo con > 5 parámetros"
+        );
+    }
+
+    #[test]
+    fn six_parameters_trigger() {
+        let analysis = project(vec![function("excede", 1, 10, Some(6), Some(2), 0)]);
+        let findings = FunctionParametersRule::default().evaluate(&analysis);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].rule_id, "FUNC003");
     }
 }
